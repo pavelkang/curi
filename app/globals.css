@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "daisyui";
+
+/* Curi theme — slothUI-flat, DaisyUI v5 (Tailwind 4 CSS-first).
+   App background #F6F7FB, cards/sidebars white, flat with a hairline
+   border and almost no shadow. Primary #5B4BDB (indigo-violet),
+   light violet tints #EDE9FE / #EEF2FF for selected states, icon
+   tiles and badges. Near-black headings, medium gray body, small
+   gray captions. Emerald only for quiz-correct, red only for wrong.
+   No gradients, no bevels, no glossy effects in this file or the app.
+   All colour lives in this theme block — pages use semantic
+   DaisyUI classes (btn-primary, badge-secondary, …), not ad-hoc
+   colours. */
+@plugin "daisyui/theme" {
+  name: "curi";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #F6F7FB;
+  --color-base-200: #FFFFFF;
+  --color-base-300: #E7E8EF;
+  --color-base-content: #111827;
+  --color-primary: #5B4BDB;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #EDE9FE;
+  --color-secondary-content: #5B4BDB;
+  --color-accent: #EEF2FF;
+  --color-accent-content: #5B4BDB;
+  --color-neutral: #111827;
+  --color-neutral-content: #F6F7FB;
+  --color-info: #5B4BDB;
+  --color-info-content: #FFFFFF;
+  --color-success: #10B981;
+  --color-success-content: #FFFFFF;
+  --color-warning: #EDE9FE;
+  --color-warning-content: #5B4BDB;
+  --color-error: #EF4444;
+  --color-error-content: #FFFFFF;
+  --radius-selector: 9999px;
+  --radius-field: 0.75rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-plus-jakarta-sans), ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-base-100 text-base-content antialiased;
+    font-family: var(--font-plus-jakarta-sans), ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
+  }
+  h1, h2, h3 {
+    letter-spacing: -0.03em;
+  }
+  ::selection {
+    background: #EDE9FE;
+    color: #5B4BDB;
+  }
+  /* Flat, pill buttons/badges — no shadow, no gradient, ever. */
+  .btn, .badge {
+    border-radius: 9999px;
+    box-shadow: none !important;
+    background-image: none !important;
+  }
+  .card {
+    box-shadow: none !important;
+    background-image: none !important;
+  }
+}
+
+/* Markdown rendering (lib/markdown.ts output). No typography plugin. */
+.markdown-body {
+  @apply space-y-5 text-[15px] leading-7 text-stone-700 sm:text-base sm:leading-8;
+}
+.markdown-body h1 {
+  @apply text-3xl font-extrabold tracking-[-0.03em] text-stone-900 sm:text-4xl;
+}
+.markdown-body h2 {
+  @apply pt-2 text-2xl font-bold tracking-[-0.02em] text-stone-900 sm:text-3xl;
+}
+.markdown-body h3 {
+  @apply pt-1 text-xl font-bold text-stone-900;
+}
+.markdown-body p {
+  @apply text-stone-700;
+}
+.markdown-body ul {
+  @apply list-disc space-y-1.5 pl-6 text-stone-700;
+}
+.markdown-body ol {
+  @apply list-decimal space-y-1.5 pl-6 text-stone-700;
+}
+.markdown-body li::marker {
+  @apply text-primary;
+}
+.markdown-body code {
+  @apply rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[0.85em] text-primary;
+}
+.markdown-body pre {
+  @apply overflow-x-auto rounded-xl bg-stone-900 p-4 shadow-none;
+}
+.markdown-body pre code {
+  @apply bg-transparent p-0 text-stone-100;
+}
+.markdown-body a {
+  @apply font-medium text-primary underline decoration-primary/30 underline-offset-4;
+}
+.markdown-body blockquote {
+  @apply border-l-4 border-secondary/40 bg-secondary/10 py-2 pl-4 pr-3 text-stone-700;
+}

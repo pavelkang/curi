@@ -1,0 +1,16 @@
+-- Curi seed: intentionally EMPTY of course content.
+-- Do not invent lessons, system-design chapters, or quiz questions here.
+-- The only seed this MVP needs is an empty draft course shell, and even
+-- that requires a real creator user id, so it is commented out.
+-- To create a shell after signing up and granting is_creator:
+--
+--   insert into public.courses (creator_id, title, description, published)
+--   values (
+--     (select id from auth.users where email = 'kai@example.com'),
+--     'Untitled draft',
+--     null,
+--     false
+--   );
+--
+-- Then build sections, lessons, and blocks in /studio.
+-- Nothing else is seeded.
