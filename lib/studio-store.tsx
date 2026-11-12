@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { readPreviewDone, writePreviewDone } from "@/lib/checklist";
 import {
   emptyContent, newId, parseContent,
   type Course, type Lesson, type LessonBlock, type LessonContent, type Section, type SectionDependency,
@@ -27,7 +28,9 @@ export const demoMode = !isSupabaseConfigured;
 // snapshots that still contain the demo course are filtered on load.
 const NUKED_IDS = new Set(["demo-course", "demo-section-1", "demo-section-2", "demo-lesson-1", "demo-lesson-2", "demo-lesson-3", "demo-dep-1"]);
 const DEMO_STORAGE_KEY = "curi-studio-demo-v1";
-export const DEMO_STORE_NOTE = "Demo — stored in this browser only, not in Supabase";
+// One honest line, used everywhere demo storage is described:
+// the demo store IS saved — in this browser only.
+export const DEMO_STORE_NOTE = "Saved in this browser only";
 
 type DemoSnapshot = {
   courses: Course[];
@@ -75,6 +78,14 @@ export type StudioContextValue = {
   addDependency: (courseId: string, fromSectionId: string, toSectionId: string) => Promise<void>;
   ensureCourseLoaded: (courseId: string) => Promise<void>;
   ensureLessonLoaded: (lessonId: string) => Promise<string | null>;
+  // Checklist step 4 (Preview as learner) is manual and lives here so
+  // the full checklist and the sidebar progress indicator share it.
+  previewDone: boolean;
+  setPreviewDone: (done: boolean) => void;
+  // The course the checklist names/links to: the last-touched one
+  // (see lib/checklist.ts relevantCourse). Null until anything is
+  // touched; the checklist then falls back to the first course.
+  lastCourseId: string | null;
 };
 
 const StudioContext = createContext<StudioContextValue | null>(null);
@@ -95,6 +106,31 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [deps, setDeps] = useState<SectionDependency[]>([]);
   const [loadedCourseIds, setLoadedCourseIds] = useState<string[]>([]);
+  // Lazy initializer: the provider is client-only, so window exists.
+  const [previewDone, setPreviewDoneState] = useState<boolean>(() => readPreviewDone());
+  const setPreviewDone = useCallback((done: boolean) => {
+    setPreviewDoneState(done);
+    writePreviewDone(done);
+  }, []);
+  // Last-touched course, for the checklist's naming rule (see
+  // lib/checklist.ts). Written to localStorage on every touch so it
+  // survives reloads, not just in-memory state.
+  const LAST_COURSE_KEY = "curi-studio-last-course-v1";
+  const [lastCourseId, setLastCourseId] = useState<string | null>(() => {
+    try {
+      return window.localStorage.getItem(LAST_COURSE_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const touchCourse = useCallback((courseId: string) => {
+    setLastCourseId(courseId);
+    try {
+      window.localStorage.setItem(LAST_COURSE_KEY, courseId);
+    } catch {
+      // Private mode / quota: in-memory only for this session.
+    }
+  }, []);
   const supabase = useMemo(() => createClient(), []);
   const loadedRef = useRef<string[]>([]);
   loadedRef.current = loadedCourseIds;
@@ -249,6 +285,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         description: null, published: false, created_at: new Date().toISOString(),
       };
       setCourses((cs) => [course, ...cs]);
+      touchCourse(course.id);
       return course;
     }
     if (!userId) throw new Error("Not signed in");
@@ -260,8 +297,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     if (err) { setError(err.message); throw new Error(err.message); }
     const course = data as Course;
     setCourses((cs) => [course, ...cs]);
+    touchCourse(course.id);
     return course;
-  }, [demoMode, supabase, userId]);
+  }, [demoMode, supabase, userId, touchCourse]);
 
   const createSection = useCallback(
     async (courseId: string): Promise<Section> => {
@@ -271,6 +309,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           position: sectionsFor(courseId).length,
         };
         setSections((ss) => [...ss, section]);
+        touchCourse(courseId);
         return section;
       }
       const { data, error: err } = await supabase.from("sections").insert({
@@ -279,19 +318,22 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       if (err) { setError(err.message); throw new Error(err.message); }
       const section = data as Section;
       setSections((ss) => [...ss, section]);
+      touchCourse(courseId);
       return section;
     },
-    [demoMode, sectionsFor, supabase],
+    [demoMode, sectionsFor, supabase, touchCourse],
   );
 
   const createLesson = useCallback(
     async (sectionId: string): Promise<Lesson> => {
+      const section = sections.find((s) => s.id === sectionId);
       if (demoMode) {
         const lesson: Lesson = {
           id: newId(), section_id: sectionId, title: "Untitled lesson",
           position: lessonsFor(sectionId).length, content: emptyContent(),
         };
         setLessons((ls) => [...ls, lesson]);
+        if (section) touchCourse(section.course_id);
         return lesson;
       }
       const { data, error: err } = await supabase.from("lessons").insert({
@@ -301,54 +343,66 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       if (err) { setError(err.message); throw new Error(err.message); }
       const lesson = { ...(data as Lesson), content: parseContent((data as { content: unknown }).content) };
       setLessons((ls) => [...ls, lesson]);
+      if (section) touchCourse(section.course_id);
       return lesson;
     },
-    [demoMode, lessonsFor, supabase],
+    [demoMode, lessonsFor, supabase, sections, touchCourse],
   );
 
   const renameCourse = useCallback(
     async (courseId: string, title: string, description: string | null) => {
       if (demoMode) {
         setCourses((cs) => cs.map((c) => (c.id === courseId ? { ...c, title, description } : c)));
+        touchCourse(courseId);
         return;
       }
       const { error: err } = await supabase.from("courses").update({ title, description }).eq("id", courseId);
       if (err) { setError(err.message); return; }
       setCourses((cs) => cs.map((c) => (c.id === courseId ? { ...c, title, description } : c)));
+      touchCourse(courseId);
     },
-    [demoMode, supabase],
+    [demoMode, supabase, touchCourse],
   );
 
   const renameSection = useCallback(
     async (sectionId: string, title: string) => {
+      const section = sections.find((s) => s.id === sectionId);
       if (demoMode) {
         setSections((ss) => ss.map((s) => (s.id === sectionId ? { ...s, title } : s)));
+        if (section) touchCourse(section.course_id);
         return;
       }
       const { error: err } = await supabase.from("sections").update({ title }).eq("id", sectionId);
       if (err) { setError(err.message); return; }
       setSections((ss) => ss.map((s) => (s.id === sectionId ? { ...s, title } : s)));
+      if (section) touchCourse(section.course_id);
     },
-    [demoMode, supabase],
+    [demoMode, supabase, sections, touchCourse],
   );
 
   const saveLesson = useCallback(
     async (lessonId: string, title: string, content: LessonContent) => {
+      const lesson = lessons.find((l) => l.id === lessonId);
+      const section = lesson ? sections.find((s) => s.id === lesson.section_id) : undefined;
       if (demoMode) {
         setLessons((ls) => ls.map((l) => (l.id === lessonId ? { ...l, title, content } : l)));
+        if (section) touchCourse(section.course_id);
         return;
       }
       const { error: err } = await supabase.from("lessons").update({ title, content }).eq("id", lessonId);
       if (err) { setError(err.message); return; }
       setLessons((ls) => ls.map((l) => (l.id === lessonId ? { ...l, title, content } : l)));
+      if (section) touchCourse(section.course_id);
     },
-    [demoMode, supabase],
+    [demoMode, supabase, lessons, sections, touchCourse],
   );
 
   const moveLesson = useCallback(
     async (lessonId: string, targetSectionId: string) => {
       const lesson = lessons.find((l) => l.id === lessonId);
       if (!lesson || lesson.section_id === targetSectionId) return;
+      const lessonCourse = sections.find((s) => s.id === lesson.section_id)?.course_id;
+      if (lessonCourse) touchCourse(lessonCourse);
       const sourceSectionId = lesson.section_id;
       if (demoMode) {
         // Place the moved lesson at the end of the target section.
@@ -386,13 +440,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       const section = sections.find((s) => s.id === targetSectionId);
       if (section) await loadCourseDetailLive(section.course_id);
     },
-    [demoMode, lessons, sections, supabase, loadCourseDetailLive],
+    [demoMode, lessons, sections, supabase, loadCourseDetailLive, touchCourse],
   );
 
   const reorderLesson = useCallback(
     async (lessonId: string, dir: -1 | 1) => {
       const lesson = lessons.find((l) => l.id === lessonId);
       if (!lesson) return;
+      const lessonCourse = sections.find((s) => s.id === lesson.section_id)?.course_id;
+      if (lessonCourse) touchCourse(lessonCourse);
       const group = lessonsFor(lesson.section_id);
       const idx = group.findIndex((l) => l.id === lessonId);
       const j = idx + dir;
@@ -412,7 +468,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       const section = sections.find((s) => s.id === lesson.section_id);
       if (section) await loadCourseDetailLive(section.course_id);
     },
-    [demoMode, lessons, lessonsFor, sections, supabase, loadCourseDetailLive],
+    [demoMode, lessons, lessonsFor, sections, supabase, loadCourseDetailLive, touchCourse],
   );
 
   const togglePublish = useCallback(
@@ -422,13 +478,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       const published = !course.published;
       if (demoMode) {
         setCourses((cs) => cs.map((c) => (c.id === courseId ? { ...c, published } : c)));
+        touchCourse(courseId);
         return;
       }
       const { error: err } = await supabase.from("courses").update({ published }).eq("id", courseId);
       if (err) { setError(err.message); return; }
       setCourses((cs) => cs.map((c) => (c.id === courseId ? { ...c, published } : c)));
+      touchCourse(courseId);
     },
-    [demoMode, courses, supabase],
+    [demoMode, courses, supabase, touchCourse],
   );
 
   const addDependency = useCallback(
@@ -436,15 +494,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       if (!fromSectionId || !toSectionId || fromSectionId === toSectionId) return;
       if (demoMode) {
         setDeps((ds) => [...ds, { id: newId(), course_id: courseId, from_section_id: fromSectionId, to_section_id: toSectionId }]);
+        touchCourse(courseId);
         return;
       }
       const { error: err } = await supabase.from("section_dependencies").insert({
         course_id: courseId, from_section_id: fromSectionId, to_section_id: toSectionId,
       });
       if (err) { setError(err.message); return; }
+      touchCourse(courseId);
       await loadCourseDetailLive(courseId);
     },
-    [demoMode, supabase, loadCourseDetailLive],
+    [demoMode, supabase, loadCourseDetailLive, touchCourse],
   );
 
   const value = useMemo(
@@ -453,14 +513,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       sectionsFor, lessonsFor, courseOfLesson,
       createCourse, createSection, createLesson, renameCourse, renameSection,
       saveLesson, moveLesson, reorderLesson, togglePublish, addDependency,
-      ensureCourseLoaded, ensureLessonLoaded,
+      ensureCourseLoaded, ensureLessonLoaded, previewDone, setPreviewDone, lastCourseId,
     }),
     [
       demoMode, hydrated, userId, isCreator, error, courses, sections, lessons, deps,
       sectionsFor, lessonsFor, courseOfLesson,
       createCourse, createSection, createLesson, renameCourse, renameSection,
       saveLesson, moveLesson, reorderLesson, togglePublish, addDependency,
-      ensureCourseLoaded, ensureLessonLoaded,
+      ensureCourseLoaded, ensureLessonLoaded, previewDone, setPreviewDone, lastCourseId,
     ],
   );
 

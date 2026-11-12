@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen } from "lucide-react";
+import { TopNav } from "@astryxdesign/core/TopNav";
+import { TopNavItem } from "@astryxdesign/core/TopNav";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Button } from "@astryxdesign/core/Button";
+import { Text } from "@astryxdesign/core/Text";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 const demoMode = !isSupabaseConfigured;
 
@@ -43,50 +44,37 @@ export default function Nav() {
     window.location.href = "/";
   };
 
-  const linkClass = (href: string, activeWhenStartsWith = false) =>
-    cn(
-      "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-      (activeWhenStartsWith ? pathname.startsWith(href) : pathname === href)
-        ? "bg-primary/10 text-primary"
-        : "text-slate-600 hover:bg-secondary hover:text-primary",
-    );
-
   return (
-    <header className="sticky top-0 z-50 border-b border-base-300 bg-white">
-      <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-1 px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="mr-2 flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
-            <BookOpen className="h-4.5 w-4.5" aria-hidden />
+    <TopNav
+      heading={
+        <Link href="/" className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-bg text-on-accent">
+            <span className="text-lg font-bold">C</span>
           </span>
-          <span className="text-lg font-bold tracking-tight text-slate-900">Curi</span>
+          <span className="text-lg font-bold tracking-tight text-primary">Curi</span>
         </Link>
-        <Link href="/" className={linkClass("/", true)}>
-          Courses
-        </Link>
-        {(isCreator || demoMode) && (
-          <Link href="/studio" className={linkClass("/studio")}>
-            Studio
-          </Link>
-        )}
-        {demoMode && <Badge variant="secondary" className="ml-1">Demo</Badge>}
-        <span className="ml-auto flex items-center gap-3">
+      }
+      endContent={
+        <span className="flex items-center gap-3">
+          {email && (
+            <Text type="supporting" maxLines={1}>
+              {email}
+              {isCreator ? " · creator" : ""}
+            </Text>
+          )}
           {email ? (
-            <>
-              <span className="hidden max-w-56 truncate text-sm text-slate-600 sm:inline">
-                {email}
-                {isCreator ? " · creator" : ""}
-              </span>
-              <Button variant="outline" size="sm" onClick={signOut}>
-                Sign out
-              </Button>
-            </>
+            <Button label="Sign out" variant="secondary" size="sm" onClick={signOut} />
           ) : (
-            <Button size="sm" asChild>
-              <Link href="/auth">Sign in</Link>
-            </Button>
+            <Button label="Sign in" variant="primary" size="sm" href="/auth" as={Link} />
           )}
         </span>
-      </nav>
-    </header>
+      }
+    >
+      <TopNavItem label="Courses" href="/" isSelected={pathname === "/"} />
+      {(isCreator || demoMode) && (
+        <TopNavItem label="Studio" href="/studio" isSelected={pathname.startsWith("/studio")} />
+      )}
+      {demoMode && <Badge label="Demo" variant="neutral" />}
+    </TopNav>
   );
 }

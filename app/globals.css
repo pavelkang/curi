@@ -1,62 +1,29 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@plugin "daisyui";
+/* Curi + Astryx, Tailwind 4 CSS-first. Layer order per the Astryx
+   Next.js + Tailwind recipe (core README): the @layer line FIRST, then
+   Tailwind theme/preflight, Astryx reset + components + the built Curi
+   theme, the Tailwind token bridge, then Tailwind utilities. A @layer
+   line below the Tailwind import would silently invert the cascade.
+   DaisyUI is gone — no @plugin "daisyui", no "curi" DaisyUI theme. */
 
-/* Curi theme — slothUI-flat, DaisyUI v5 (Tailwind 4 CSS-first).
-   App background #F6F7FB, cards/sidebars white, flat with a hairline
-   border and almost no shadow. Primary #5B4BDB (indigo-violet),
-   light violet tints #EDE9FE / #EEF2FF for selected states, icon
-   tiles and badges. Near-black headings, medium gray body, small
-   gray captions. Emerald only for quiz-correct, red only for wrong.
-   No gradients, no bevels, no glossy effects in this file or the app.
-   All colour lives in this theme block — pages use semantic
-   DaisyUI classes (btn-primary, badge-secondary, …), not ad-hoc
-   colours. */
-@plugin "daisyui/theme" {
-  name: "curi";
-  default: true;
-  prefersdark: false;
-  color-scheme: light;
-  --color-base-100: #F6F7FB;
-  --color-base-200: #FFFFFF;
-  --color-base-300: #E7E8EF;
-  --color-base-content: #111827;
-  --color-primary: #5B4BDB;
-  --color-primary-content: #FFFFFF;
-  --color-secondary: #EDE9FE;
-  --color-secondary-content: #5B4BDB;
-  --color-accent: #EEF2FF;
-  --color-accent-content: #5B4BDB;
-  --color-neutral: #111827;
-  --color-neutral-content: #F6F7FB;
-  --color-info: #5B4BDB;
-  --color-info-content: #FFFFFF;
-  --color-success: #10B981;
-  --color-success-content: #FFFFFF;
-  --color-warning: #EDE9FE;
-  --color-warning-content: #5B4BDB;
-  --color-error: #EF4444;
-  --color-error-content: #FFFFFF;
-  --radius-selector: 9999px;
-  --radius-field: 0.75rem;
-  --radius-box: 1.25rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
-@custom-variant dark (&:is(.dark *));
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "../themes/curi/curiTheme.css";
+@import "@astryxdesign/core/tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);
 
+/* Figtree is self-hosted by next/font/google (app/layout.tsx); the
+   Astryx tokens already name it, so no Google Fonts @import here. */
 @theme inline {
-  --font-sans: var(--font-plus-jakarta-sans), ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-figtree), ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @layer base {
   body {
-    @apply bg-base-100 text-base-content antialiased;
-    font-family: var(--font-plus-jakarta-sans), ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    @apply bg-body font-sans text-primary antialiased;
     text-rendering: optimizeLegibility;
     letter-spacing: -0.01em;
   }
@@ -64,48 +31,40 @@
     letter-spacing: -0.03em;
   }
   ::selection {
-    background: #EDE9FE;
-    color: #5B4BDB;
-  }
-  /* Flat, pill buttons/badges — no shadow, no gradient, ever. */
-  .btn, .badge {
-    border-radius: 9999px;
-    box-shadow: none !important;
-    background-image: none !important;
-  }
-  .card {
-    box-shadow: none !important;
-    background-image: none !important;
+    background: var(--color-accent-muted);
+    color: var(--color-text-accent);
   }
 }
 
-/* Markdown rendering (lib/markdown.ts output). No typography plugin. */
+/* Markdown rendering (lib/markdown.ts output). No typography plugin.
+   Colours are Astryx tokens via the Tailwind bridge: text-primary is
+   the near-black text token, text-accent the violet accent. */
 .markdown-body {
-  @apply space-y-5 text-[15px] leading-7 text-stone-700 sm:text-base sm:leading-8;
+  @apply space-y-5 text-[15px] leading-7 text-secondary sm:text-base sm:leading-8;
 }
 .markdown-body h1 {
-  @apply text-3xl font-extrabold tracking-[-0.03em] text-stone-900 sm:text-4xl;
+  @apply text-3xl font-extrabold tracking-[-0.03em] text-primary sm:text-4xl;
 }
 .markdown-body h2 {
-  @apply pt-2 text-2xl font-bold tracking-[-0.02em] text-stone-900 sm:text-3xl;
+  @apply pt-2 text-2xl font-bold tracking-[-0.02em] text-primary sm:text-3xl;
 }
 .markdown-body h3 {
-  @apply pt-1 text-xl font-bold text-stone-900;
+  @apply pt-1 text-xl font-bold text-primary;
 }
 .markdown-body p {
-  @apply text-stone-700;
+  @apply text-secondary;
 }
 .markdown-body ul {
-  @apply list-disc space-y-1.5 pl-6 text-stone-700;
+  @apply list-disc space-y-1.5 pl-6 text-secondary;
 }
 .markdown-body ol {
-  @apply list-decimal space-y-1.5 pl-6 text-stone-700;
+  @apply list-decimal space-y-1.5 pl-6 text-secondary;
 }
 .markdown-body li::marker {
-  @apply text-primary;
+  @apply text-accent;
 }
 .markdown-body code {
-  @apply rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[0.85em] text-primary;
+  @apply rounded-md bg-accent-muted px-1.5 py-0.5 font-mono text-[0.85em] text-accent;
 }
 .markdown-body pre {
   @apply overflow-x-auto rounded-xl bg-stone-900 p-4 shadow-none;
@@ -114,8 +73,8 @@
   @apply bg-transparent p-0 text-stone-100;
 }
 .markdown-body a {
-  @apply font-medium text-primary underline decoration-primary/30 underline-offset-4;
+  @apply font-medium text-accent underline decoration-accent/30 underline-offset-4;
 }
 .markdown-body blockquote {
-  @apply border-l-4 border-secondary/40 bg-secondary/10 py-2 pl-4 pr-3 text-stone-700;
+  @apply border-l-4 border-purple-ring bg-accent-muted py-2 pl-4 pr-3 text-secondary;
 }

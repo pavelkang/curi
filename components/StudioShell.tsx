@@ -5,22 +5,46 @@
 // the StudioProvider state) across navigation between Studio pages,
 // which is what makes standalone lesson pages work in demo mode.
 // See lib/studio-store.tsx for the demo browser store.
+//
+// Hydration: the sidebar reads the browser-local demo store, which the
+// server can never know. The store's own `hydrated` flag must NOT gate
+// this render — the provider sits above the layout's Suspense boundary,
+// so its mount effect flips that flag before this streamed boundary
+// hydrates, and the server/client trees diverge (hydration error).
+// Instead this component gates on its OWN mounted flag: its effect runs
+// only after this boundary hydrates, so the first client render matches
+// the server (loading text) and the store content appears in a normal
+// post-hydration update.
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEMO_STORE_NOTE, useStudio } from "@/lib/studio-store";
-import { Button } from "@/components/ui/button";
+import { checklistDoneCount, CHECKLIST_TOTAL, computeChecklistSteps } from "@/lib/checklist";
+import { Button } from "@astryxdesign/core/Button";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Link } from "@astryxdesign/core/Link";
+import { Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/VStack";
 
 export default function StudioShell({ children }: { children: React.ReactNode }) {
   const studio = useStudio();
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [collapsedCourses, setCollapsedCourses] = useState<string[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<string[]>([]);
 
   const toggle = (list: string[], id: string, set: (v: string[]) => void) =>
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+
+  // Compact get-started progress, shown on course/lesson pages too —
+  // the full checklist only exists on /studio, and it vanished once
+  // the teacher went deeper. Same count as the checklist itself.
+  const inCourseOrLesson = pathname.startsWith("/studio/courses");
+  const checklistSteps = computeChecklistSteps(studio.courses, studio.lessons, studio.previewDone);
+  const checklistDone = checklistDoneCount(checklistSteps);
 
   const onCreateCourse = async () => {
     const course = await studio.createCourse();
@@ -39,34 +63,40 @@ export default function StudioShell({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-      <aside className="w-full shrink-0 rounded-[20px] border border-base-300 bg-white p-4 sm:p-5 lg:sticky lg:top-20 lg:w-72">
-        <div className="border-b border-base-300 pb-4">
+      <aside className="w-full shrink-0 rounded-lg border border-border bg-surface p-4 sm:p-5 lg:sticky lg:top-20 lg:w-72">
+        <VStack gap={2}>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">Studio</h1>
-            {studio.demoMode && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Demo</span>
-            )}
+            <Heading level={1}>Studio</Heading>
+            {studio.demoMode && <Badge label="Demo" variant="neutral" />}
           </div>
-          {studio.demoMode && (
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">{DEMO_STORE_NOTE}</p>
+          {studio.demoMode && <Text type="supporting">{DEMO_STORE_NOTE}</Text>}
+          {mounted && studio.demoMode && (
+            <Link href="/studio">
+              Offline drafts: {studio.courses.length + studio.lessons.length} · saved in this browser only
+            </Link>
           )}
-          {(studio.demoMode || (studio.hydrated && studio.userId && studio.isCreator)) && (
-            <Button size="sm" className="mt-3" onClick={onCreateCourse}>
-              + Course
-            </Button>
+          {mounted && inCourseOrLesson && (studio.demoMode || (studio.userId && studio.isCreator)) && (
+            <Text type="supporting">
+              <Link href="/studio">
+                Get started: {checklistDone} of {CHECKLIST_TOTAL} done
+              </Link>
+            </Text>
           )}
-        </div>
+          {mounted && (studio.demoMode || (studio.userId && studio.isCreator)) && (
+            <Button label="+ Course" variant="primary" size="sm" onClick={onCreateCourse} />
+          )}
+        </VStack>
 
-        {!studio.hydrated ? (
-          <p className="mt-4 text-sm text-slate-500">Loading Studio…</p>
+        {!mounted ? (
+          <Text type="supporting">Loading Studio…</Text>
         ) : !studio.demoMode && !studio.userId ? (
-          <p className="mt-4 text-sm text-slate-500">
-            <Link href="/auth" className="text-primary underline">Sign in</Link> to use the Studio.
-          </p>
+          <Text type="supporting">
+            <Link href="/auth">Sign in</Link> to use the Studio.
+          </Text>
         ) : !studio.demoMode && !studio.isCreator ? (
-          <p className="mt-4 text-sm text-slate-500">Your account is not flagged as a creator yet.</p>
+          <Text type="supporting">Your account is not flagged as a creator yet.</Text>
         ) : (
-          <nav aria-label="Courses" className="mt-2 space-y-1">
+          <nav aria-label="Courses" className="mt-4 space-y-1">
             {studio.courses.map((course) => {
               const courseCollapsed = collapsedCourses.includes(course.id);
               const courseSections = studio.sectionsFor(course.id);
@@ -78,25 +108,19 @@ export default function StudioShell({ children }: { children: React.ReactNode })
                       type="button"
                       aria-label={courseCollapsed ? `Expand ${course.title}` : `Collapse ${course.title}`}
                       onClick={() => toggle(collapsedCourses, course.id, setCollapsedCourses)}
-                      className="w-6 shrink-0 text-center text-slate-500 hover:text-primary"
+                      className="w-6 shrink-0 text-center text-secondary hover:text-accent"
                     >
                       {courseCollapsed ? "▸" : "▾"}
                     </button>
                     <Link
                       href={courseHref}
-                      className={`flex-1 truncate rounded px-1 py-1 text-sm font-semibold hover:text-primary ${
-                        pathname === courseHref ? "bg-secondary text-primary" : "text-slate-900"
+                      className={`flex-1 truncate rounded px-1 py-1 text-sm font-semibold hover:text-accent ${
+                        pathname === courseHref ? "bg-accent-muted text-accent" : "text-primary"
                       }`}
                     >
                       {course.title}
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => void onCreateSection(course.id)}
-                      className="shrink-0 rounded px-1 py-0.5 text-xs font-medium text-primary hover:bg-secondary"
-                    >
-                      + Section
-                    </button>
+                    <Button label="+ Section" variant="ghost" size="sm" onClick={() => void onCreateSection(course.id)} />
                   </div>
                   {!courseCollapsed &&
                     courseSections.map((section) => {
@@ -109,18 +133,12 @@ export default function StudioShell({ children }: { children: React.ReactNode })
                               type="button"
                               aria-label={sectionCollapsed ? `Expand ${section.title}` : `Collapse ${section.title}`}
                               onClick={() => toggle(collapsedSections, section.id, setCollapsedSections)}
-                              className="w-6 shrink-0 text-center text-slate-500 hover:text-primary"
+                              className="w-6 shrink-0 text-center text-secondary hover:text-accent"
                             >
                               {sectionCollapsed ? "▸" : "▾"}
                             </button>
-                            <span className="flex-1 truncate px-1 py-1 text-sm text-slate-700">{section.title}</span>
-                            <button
-                              type="button"
-                              onClick={() => void onCreateLesson(course.id, section.id)}
-                              className="shrink-0 rounded px-1 py-0.5 text-xs font-medium text-primary hover:bg-secondary"
-                            >
-                              + Lesson
-                            </button>
+                            <span className="flex-1 truncate px-1 py-1 text-sm text-primary">{section.title}</span>
+                            <Button label="+ Lesson" variant="ghost" size="sm" onClick={() => void onCreateLesson(course.id, section.id)} />
                           </div>
                           {!sectionCollapsed &&
                             sectionLessons.map((lesson) => {
@@ -129,8 +147,8 @@ export default function StudioShell({ children }: { children: React.ReactNode })
                                 <Link
                                   key={lesson.id}
                                   href={lessonHref}
-                                  className={`ml-7 block truncate rounded px-1 py-1 text-sm hover:text-primary ${
-                                    pathname === lessonHref ? "bg-secondary font-medium text-primary" : "text-slate-600"
+                                  className={`ml-7 block truncate rounded px-1 py-1 text-sm hover:text-accent ${
+                                    pathname === lessonHref ? "bg-accent-muted font-medium text-accent" : "text-secondary"
                                   }`}
                                 >
                                   {lesson.title}
@@ -144,7 +162,7 @@ export default function StudioShell({ children }: { children: React.ReactNode })
               );
             })}
             {studio.courses.length === 0 && (
-              <p className="mt-2 text-sm text-slate-500">No courses yet. Press + Course.</p>
+              <Text type="supporting">No courses yet. Press + Course.</Text>
             )}
           </nav>
         )}

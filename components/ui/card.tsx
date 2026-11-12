@@ -1,44 +1,21 @@
+// Astryx Card, behind the old import path. Astryx has no CardHeader /
+// CardTitle / CardDescription / CardContent / CardFooter subcomponents —
+// pages compose Astryx Heading, Text and VStack inside the Card instead,
+// and nested cards are out (Astryx: cards are the exception, never
+// nested). Only `Card` is exported from here now.
+
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import {Card as AstryxCard} from "@astryxdesign/core/Card";
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("card bg-white border border-base-300 shadow-none rounded-[20px]", className)} {...props} />
-  )
-);
-Card.displayName = "Card";
+export interface CardProps {
+  className?: string;
+  children?: React.ReactNode;
+}
 
-const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
-  )
-);
-CardHeader.displayName = "CardHeader";
-
-const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("font-semibold leading-none tracking-tight", className)} {...props} />
-  )
-);
-CardTitle.displayName = "CardTitle";
-
-const CardDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("text-sm text-base-content/60", className)} {...props} />
-  )
-);
-CardDescription.displayName = "CardDescription";
-
-const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-);
-CardContent.displayName = "CardContent";
-
-const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex items-center p-6 pt-0", className)} {...props} />
-  )
-);
-CardFooter.displayName = "CardFooter";
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export function Card({className, children}: CardProps) {
+  return (
+    <AstryxCard className={className} elevation="none">
+      {children}
+    </AstryxCard>
+  );
+}

@@ -3,18 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Curi Creator — Local Captions</title>
+<title>Curi Creator — Local Captions &amp; AI Drafts</title>
 <style>
   body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 24px; color: #111827; background: #F6F7FB; }
   h1 { font-size: 20px; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 24px 0 8px; }
   p { color: #4b5563; font-size: 14px; line-height: 1.5; }
   button { border-radius: 9999px; border: 1px solid #d1d5db; background: #fff; padding: 8px 16px; cursor: pointer; font-size: 14px; }
   button.primary { background: #5B4BDB; border-color: #5B4BDB; color: #fff; }
   button:disabled { opacity: .5; cursor: default; }
   textarea { width: 100%; min-height: 260px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; font-family: ui-monospace, monospace; font-size: 13px; }
-  #status { font-size: 13px; color: #4b5563; white-space: pre-wrap; }
+  #notes-md, #quiz-json { min-height: 220px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 6px; color: #111827; }
+  #status, #drafts-status { font-size: 13px; color: #4b5563; white-space: pre-wrap; }
   #file { font-size: 13px; word-break: break-all; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .note { background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; color: #713f12; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0 0; }
 </style>
 </head>
 <body>
@@ -29,6 +34,27 @@
 <p id="status"></p>
 <label for="vtt">WebVTT output (paste into Studio → video block → Edited captions)</label>
 <textarea id="vtt" readonly placeholder="WebVTT will appear here after transcription."></textarea>
+
+<hr>
+<h2>AI drafts — notes, chapters &amp; quiz (DRAFT)</h2>
+<p>After transcription, generate draft lesson notes, timed chapters and quiz questions from the transcript — <strong>locally, no cloud</strong>. Edit them here, then copy the blocks into Studio as editable blocks. <strong>Nothing is published automatically and nothing is written to Supabase from this window.</strong> Drafts are labelled DRAFT: review the wording in Studio before the lesson goes to learners.</p>
+<div class="row">
+  <button id="drafts" type="button" class="primary" disabled>Generate draft notes, chapters &amp; quiz</button>
+</div>
+<p id="drafts-status"></p>
+<div id="drafts-section" style="display:none">
+  <p id="drafts-note" class="note"></p>
+  <label for="notes-md">Notes + chapters — markdown block (edit, then copy)</label>
+  <textarea id="notes-md" placeholder="Notes markdown will appear here after draft generation."></textarea>
+  <label for="quiz-json">Quiz block — JSON (edit, then copy)</label>
+  <textarea id="quiz-json" placeholder="Quiz block JSON will appear here after draft generation."></textarea>
+  <div class="row">
+    <button id="copy-notes" type="button" disabled>Copy markdown block (JSON)</button>
+    <button id="copy-quiz" type="button" disabled>Copy quiz block (JSON)</button>
+    <button id="copy-all" type="button" disabled>Copy all blocks (LessonContent JSON)</button>
+  </div>
+  <p>Paste a copied block into Studio as a new block of the same kind (markdown block, or quiz block), or paste the “all blocks” JSON as the lesson's content blocks. Check each question's answer and explanation in Studio — the drafts are cloze-style (fill-in-the-blank from the transcript) and weaker than LLM-drafted questions.</p>
+</div>
 <script src="./captions-renderer.js"></script>
 </body>
 </html>

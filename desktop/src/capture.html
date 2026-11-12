@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curi Creator — Record Screen + Camera</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 24px; color: #111827; background: #F6F7FB; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 24px 0 8px; }
+  p { color: #4b5563; font-size: 14px; line-height: 1.5; }
+  button { border-radius: 9999px; border: 1px solid #d1d5db; background: #fff; padding: 8px 16px; cursor: pointer; font-size: 14px; }
+  button.primary { background: #5B4BDB; border-color: #5B4BDB; color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.danger { background: #dc2626; border-color: #dc2626; color: #fff; }
+  select { padding: 8px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; max-width: 100%; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
+  #status, #audio-status, #saved { font-size: 13px; color: #4b5563; white-space: pre-wrap; word-break: break-all; }
+  #timer { font-size: 28px; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
+  .note { background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; color: #713f12; }
+  .ok { background: #dcfce7; border: 1px solid #86efac; border-radius: 8px; padding: 10px 12px; color: #14532d; }
+  canvas { width: 100%; max-width: 720px; border-radius: 12px; background: #000; display: block; }
+  #sources { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  #sources button { padding: 4px; border-radius: 12px; }
+  #sources img { width: 160px; height: 90px; object-fit: cover; display: block; border-radius: 8px; }
+  #sources button.selected { outline: 3px solid #5B4BDB; }
+  video.preview { width: 100%; max-width: 720px; border-radius: 12px; background: #000; }
+  textarea { width: 100%; min-height: 120px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; font-family: ui-monospace, monospace; font-size: 13px; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0 0; }
+</style>
+</head>
+<body>
+<h1>Record screen + camera</h1>
+<p>In-app desktop capture (Step 3 prototype). Records the screen with your camera as picture-in-picture in the bottom-right corner — the same layout as the web Recorder in Studio (<code>~/workspace/curi/components/Recorder.tsx</code>: 1280&times;720 canvas, camera 320&times;180, 16&nbsp;px inset). Output is a local <code>.webm</code> file; nothing is uploaded from this window.</p>
+<p class="note"><strong>System audio:</strong> included in the capture <em>only if the platform provides it</em>; otherwise the recording is mic-only. Mac/Windows system-audio status is <strong>UNVERIFIED</strong> — it needs a real Mac/Windows test. On this Linux VM, desktopCapturer system audio is expected to be limited/unavailable (see the audio line below after a recording).</p>
+
+<label for="source-select">Screen / window to record</label>
+<div class="row">
+  <select id="source-select"><option value="">Loading sources…</option></select>
+  <button id="refresh-sources" type="button">Refresh sources</button>
+</div>
+<div id="sources"></div>
+
+<label for="mode-select">Mode</label>
+<div class="row">
+  <select id="mode-select">
+    <option value="screen-camera">Screen + camera headshot</option>
+    <option value="screen-only" selected>Screen only</option>
+    <option value="camera-only">Camera only</option>
+  </select>
+  <span id="camera-status">Checking camera…</span>
+</div>
+
+<div class="row">
+  <button id="start" type="button" class="primary">Start recording</button>
+  <button id="pause" type="button" disabled>Pause</button>
+  <button id="resume" type="button" disabled>Resume</button>
+  <button id="stop" type="button" class="danger" disabled>Stop &amp; save</button>
+  <span id="timer">00:00</span>
+  <span id="rec-dot" style="display:none;color:#dc2626">● REC</span>
+</div>
+<p id="status"></p>
+<p id="audio-status"></p>
+
+<video id="screen-video" muted playsinline style="display:none"></video>
+<video id="camera-video" muted playsInline style="display:none"></video>
+<canvas id="canvas" width="1280" height="720"></canvas>
+
+<div id="after" style="display:none">
+  <hr>
+  <h2>Saved recording</h2>
+  <p id="saved"></p>
+  <video id="preview" class="preview" controls></video>
+  <div class="row">
+    <button id="caption" type="button" class="primary">Caption this recording</button>
+    <button id="drafts" type="button" disabled>Generate drafts</button>
+    <button id="show-file" type="button">Show in folder</button>
+    <button id="copy-path" type="button">Copy file path</button>
+  </div>
+  <p id="caption-status"></p>
+  <label for="vtt">WebVTT (after captioning — paste into Studio → video block → Edited captions)</label>
+  <textarea id="vtt" readonly placeholder="WebVTT will appear here after captioning."></textarea>
+  <p><strong>Upload to Studio (Mux):</strong> do <em>not</em> upload from this window. In Studio, open the lesson, add/open its video block, and upload this same file through Studio's existing Mux upload — then paste the VTT above into that video block's <strong>Edited captions</strong> field and save. (Same path as the OBS-file import; Mux upload is deliberately not reimplemented in Electron.)</p>
+</div>
+<script src="./capture-renderer.js"></script>
+</body>
+</html>

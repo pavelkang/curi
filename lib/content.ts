@@ -7,7 +7,12 @@ export type QuizQuestion = {
   id: string;
   prompt: string;
   options: string[]; // exactly 4 for MVP
-  correct_index: number; // 0..3
+  // 0..3, or -1 = no correct answer chosen yet. A new question
+  // starts at -1 so a quiz can never silently ship with Option 1
+  // marked correct by default; the editor shows a per-option
+  // "Correct" marker and a "Choose the correct answer" hint until
+  // one is picked.
+  correct_index: number;
   explanation: string;
 };
 
@@ -23,8 +28,20 @@ export type VideoBlock = {
   // is rendered by the player from a blob URL. It is NOT automatically
   // pushed to Mux as a track. That push is an explicit gap, not faked.
   caption_text?: string;
+  // Demo-mode local take: id of the webm blob in IndexedDB
+  // (lib/local-video.ts). Set when a file is picked or a recorded take
+  // is saved in this browser; the blob itself is NOT in this JSON.
+  // In live mode this field is ignored for playback.
+  local_video_id?: string;
   title?: string;
 };
+
+// A video block counts as playable only when there is something to
+// play: a Mux playback id, or a locally stored take. An empty video
+// block (no playback id, no local take) is not a recorded lesson.
+export function isPlayableVideoBlock(b: VideoBlock): boolean {
+  return Boolean(b.mux_playback_id) || Boolean(b.local_video_id);
+}
 
 export type MarkdownBlock = {
   kind: "markdown";
@@ -39,7 +56,31 @@ export type QuizBlock = {
   questions: QuizQuestion[];
 };
 
-export type LessonBlock = VideoBlock | MarkdownBlock | QuizBlock;
+// Whiteboard block: a TLDraw drawing stored as a store snapshot in
+// this lesson's JSON (jsonb), NOT a blob and NOT a screenshot. The
+// snapshot is the `document` part of tldraw's getSnapshot() output
+// ({ store, schema }); the session part (camera, selection) is never
+// stored. A student sees the teacher's actual drawing, rendered
+// read-only from this snapshot. A recorded whiteboard lesson is a
+// separate video block (local take / Mux), paired with this block.
+export type WhiteboardBlock = {
+  kind: "whiteboard";
+  id: string;
+  title?: string;
+  snapshot?: unknown;
+};
+
+// A stored snapshot is valid only if it looks like a TLDraw store
+// snapshot: a plain object with a `store` record. Anything else is
+// dropped on parse (the block survives, empty) so a malformed
+// snapshot can never break the lesson page.
+export function isValidWhiteboardSnapshot(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const store = (value as Record<string, unknown>).store;
+  return Boolean(store) && typeof store === "object" && !Array.isArray(store);
+}
+
+export type LessonBlock = VideoBlock | MarkdownBlock | QuizBlock | WhiteboardBlock;
 
 export type LessonContent = {
   version: 1;
@@ -65,7 +106,16 @@ export function parseContent(value: unknown): LessonContent {
         mux_playback_id: typeof raw.mux_playback_id === "string" ? raw.mux_playback_id : undefined,
         caption_track_url: typeof raw.caption_track_url === "string" ? raw.caption_track_url : undefined,
         caption_text: typeof raw.caption_text === "string" ? raw.caption_text : undefined,
+        local_video_id: typeof raw.local_video_id === "string" ? raw.local_video_id : undefined,
         title: typeof raw.title === "string" ? raw.title : undefined,
+      });
+    } else if (raw.kind === "whiteboard") {
+      // Malformed snapshot → keep the block, drop the snapshot.
+      blocks.push({
+        kind: "whiteboard",
+        id: String(raw.id ?? newId()),
+        title: typeof raw.title === "string" ? raw.title : undefined,
+        snapshot: isValidWhiteboardSnapshot(raw.snapshot) ? raw.snapshot : undefined,
       });
     } else if (raw.kind === "markdown") {
       blocks.push({
@@ -84,9 +134,9 @@ export function parseContent(value: unknown): LessonContent {
                 ? (q.options as unknown[]).map(String).slice(0, 4)
                 : ["", "", "", ""],
               correct_index:
-                typeof q.correct_index === "number" && q.correct_index >= 0 && q.correct_index <= 3
+                typeof q.correct_index === "number" && q.correct_index >= -1 && q.correct_index <= 3
                   ? q.correct_index
-                  : 0,
+                  : -1,
               explanation: typeof q.explanation === "string" ? q.explanation : "",
             }))
             // MCQ only: enforce exactly 4 options, padding with "" if short.

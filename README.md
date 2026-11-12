@@ -4,17 +4,42 @@ A learning platform, web first, no payment. Creators build courses as a
 graph of lesson pages; learners watch, read, take MCQ quizzes, and
 self-mark lessons done. Suggested path only — nothing locks.
 
-## UI: shadcn, clean and minimal
+## UI: Astryx, clean and minimal
 
-The UI is built with shadcn-style components in `components/ui/` on
-Radix primitives, with `components.json`, `lib/utils.ts` (`cn()`), and
-shadcn CSS variables in `app/globals.css` (Tailwind 4, CSS-first).
-Components: button, card, input, label, textarea, badge, separator,
-skeleton, tabs, dialog, checkbox, radio-group, select. Look: white base
-with a blueish theme — primary blue-600 (#2563eb), blue-700 hover,
-blue-50/100 tints for active and selected surfaces, blue focus rings,
-neutral slate text and borders. No purple, no full-page gradients.
-Demo banner is a polished blue info bar. Pages do not use inline styles.
+The UI is built with Meta's Astryx design system (`@astryxdesign/core`
+0.7.14, `@astryxdesign/theme-neutral` as the base, `@stylexjs/stylex`),
+installed from npm — no vendored copy. The Curi theme lives in
+`themes/curi/curiTheme.ts` (built with `npx @astryxdesign/cli theme
+build`, outputs committed beside it): neutral theme extended with the
+violet accent seed `#5B4BDB` (pipeline expands it to `#5547D6` light /
+`#CCBDFF` dark), page background `#F6F7FB`, pill buttons, 20px cards,
+Figtree for body and headings (self-hosted via `next/font/google` —
+Astryx prescribes Figtree, so Plus Jakarta Sans is gone). `app/globals.css`
+follows Astryx's Next.js + Tailwind recipe (layer order first, then the
+Tailwind theme bridge, which maps `text-primary`, `bg-surface`,
+`border-border`, `bg-accent-bg`, `text-accent`, `bg-accent-muted` to
+theme tokens). `app/providers.tsx` wraps the app in Astryx `Theme`
+(mode pinned to light — no dark theme) plus `LinkProvider` (Next Link).
+Astryx components used: Button, Card, Badge, TextInput, TextArea,
+Heading, Text, VStack, HStack, TabList/Tab, Selector, RadioList,
+CheckboxInput, ProgressBar, Skeleton, Banner, Breadcrumbs, TopNav,
+Link. `components/ui/` keeps the old import paths as thin Astryx-backed
+adapters (button, card, badge, input, textarea) so call sites barely
+changed; the shadcn-only primitives (label, tabs, select, radio-group,
+separator, skeleton, dialog, checkbox) and `components.json` are deleted,
+and DaisyUI, Radix, `class-variance-authority` and `tw-animate-css` are
+uninstalled. Look: flat white surfaces on `#F6F7FB`, violet accent,
+no gradients, no cards-on-cards. Pages do not use inline styles.
+
+Studio hydration note: the Studio shell renders the browser-local demo
+store, which the server can never know. The shell and Studio pages gate
+their store-dependent content on their OWN local mounted flag — never
+on the store's `hydrated` flag, whose provider sits above the layout's
+Suspense boundary and flips before the streamed boundary hydrates
+(which mismatches hydration). Do not reintroduce store-`hydrated` gates
+in Studio render paths, and do not use `next/dynamic` with `ssr: false`
+for the shell — Next 16.4's `cacheComponents` instant validation rejects
+browser-only rendering there.
 
 ## Demo mode: run with zero credentials
 
@@ -60,6 +85,43 @@ No-backend routes:
 When Supabase **is** configured, demo mode does not appear at all and
 the real data paths run unchanged. Demo data is never written to a
 backend and never mixed with real courses.
+
+## Teacher checklist + offline drafts queue (Step 4, 2026-11-11)
+
+Both live in shared web code — `components/TeacherChecklist.tsx` and
+`components/OfflineDraftsQueue.tsx`, rendered on the Studio home page
+(`app/studio/page.tsx`), with a queue count in the Studio sidebar
+(`components/StudioShell.tsx`). The desktop app loads them from the
+bundled web app; nothing about them is forked into `curi-desktop`.
+
+**Get started checklist.** Five steps: (1) Create a course, (2) Record
+a lesson, (3) Add a quiz, (4) Preview as learner, (5) Publish. Steps 1,
+2, 3 and 5 are auto-detected from real Studio state (a course exists /
+a lesson has a video block / a lesson has a quiz block / a course is
+published). Step 4 is a manual checkbox, labelled as such — the app
+cannot detect that the teacher looked at the learner view. Each step
+links to the real place (course page, lesson page, learner course page,
+Publish control on the course page); step 2 also notes the desktop
+path (Tools → Record Screen + Camera…). Dismissal persists in
+localStorage (`curi-teacher-checklist-v1`), with a "Show the get-started
+checklist" link to bring it back. No Supabase write is invented for it.
+
+**Offline drafts — Unsynced queue.** In demo mode it lists every
+course and lesson in the browser store as **QUEUED — NOT SYNCED**,
+with a per-lesson block summary (videos, quizzes, edited captions).
+Edited captions and drafts pasted from the desktop captions window
+appear as ordinary lesson blocks — there is no second content model
+and no separate draft tracking. It never claims an item is synced.
+In live mode (Supabase connected) there is no offline queue and no
+sync engine: the panel says so and reports that Studio saves directly
+to Supabase. **Live sync is not implemented** — nothing syncs on its
+own when a backend appears later.
+
+**Demo-mode honesty, stated on the steps themselves.** In demo mode
+Publish only flips the local flag, and the learner preview route reads
+from Supabase, so a demo-only course does not appear on the learner
+list until Supabase is connected. Both facts are written on steps 4
+and 5, not hidden in a footnote.
 
 Locked spec (2026-11-03):
 - Kai is the first creator; friends are invited later (physics, design, …).

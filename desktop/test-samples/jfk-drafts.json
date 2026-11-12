@@ -1,0 +1,178 @@
+{
+  "method": "deterministic-rule-based",
+  "method_note": "Deterministic draft from the transcript (no LLM). A 0.5B local instruct model was tried on this VM and rejected: it hallucinated content not in the transcript (see src/ai-drafts.js header). MCQs are cloze-style and weaker than LLM drafts — review and rewrite before publishing.",
+  "source": {
+    "text": "And so my fellow Americans ask not what your country can do for you ask what you can do for your country.",
+    "segment_count": 2
+  },
+  "notes": [
+    {
+      "timestamp": "00:00",
+      "timestamp_seconds": 0,
+      "text": "And so my fellow Americans ask not what your country can do for you"
+    },
+    {
+      "timestamp": "00:07",
+      "timestamp_seconds": 7.74,
+      "text": "Ask what you can do for your country."
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 10.64,
+      "title": "And so my fellow Americans ask not what your country can…",
+      "text": "And so my fellow Americans ask not what your country can do for you ask what you can do for your country."
+    }
+  ],
+  "questions": [
+    {
+      "id": "draft-q-1",
+      "prompt": "Fill in the blank (from the lesson transcript): “And so my fellow Americans ___ not what your country can do for you”",
+      "options": [
+        "country",
+        "fellow",
+        "americans",
+        "ask"
+      ],
+      "correct_index": 3,
+      "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing.",
+      "source_timestamp": "00:00",
+      "source_timestamp_seconds": 0,
+      "source_text": "And so my fellow Americans ask not what your country can do for you"
+    },
+    {
+      "id": "draft-q-2",
+      "prompt": "Fill in the blank (from the lesson transcript): “And so my fellow Americans ask not what your ___ can do for you”",
+      "options": [
+        "country",
+        "ask",
+        "fellow",
+        "americans"
+      ],
+      "correct_index": 0,
+      "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing.",
+      "source_timestamp": "00:00",
+      "source_timestamp_seconds": 0,
+      "source_text": "And so my fellow Americans ask not what your country can do for you"
+    },
+    {
+      "id": "draft-q-3",
+      "prompt": "Fill in the blank (from the lesson transcript): “And so my ___ Americans ask not what your country can do for you”",
+      "options": [
+        "ask",
+        "fellow",
+        "country",
+        "americans"
+      ],
+      "correct_index": 1,
+      "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing.",
+      "source_timestamp": "00:00",
+      "source_timestamp_seconds": 0,
+      "source_text": "And so my fellow Americans ask not what your country can do for you"
+    }
+  ],
+  "notesMarkdown": "# Lesson notes (DRAFT)\n\n> Draft generated locally from the Whisper transcript. Review and edit before publishing — nothing here was sent to the cloud and no content was added beyond the transcript.\n\n- [00:00] And so my fellow Americans ask not what your country can do for you\n- [00:07] Ask what you can do for your country.\n\n## Chapters (DRAFT)\n\n- [00:00] And so my fellow Americans ask not what your country can…\n\n_Chapter titles are the opening words of each section, taken verbatim from the transcript — no topics were invented._",
+  "chaptersMarkdown": "## Chapters (DRAFT)\n\n- [00:00] And so my fellow Americans ask not what your country can…\n\n_Chapter titles are the opening words of each section, taken verbatim from the transcript — no topics were invented._",
+  "markdownBlock": {
+    "kind": "markdown",
+    "id": "draft-md-1",
+    "markdown": "# Lesson notes (DRAFT)\n\n> Draft generated locally from the Whisper transcript. Review and edit before publishing — nothing here was sent to the cloud and no content was added beyond the transcript.\n\n- [00:00] And so my fellow Americans ask not what your country can do for you\n- [00:07] Ask what you can do for your country.\n\n## Chapters (DRAFT)\n\n- [00:00] And so my fellow Americans ask not what your country can…\n\n_Chapter titles are the opening words of each section, taken verbatim from the transcript — no topics were invented._"
+  },
+  "quizBlock": {
+    "kind": "quiz",
+    "id": "draft-quiz-1",
+    "title": "Draft quiz — review before publishing",
+    "questions": [
+      {
+        "id": "draft-q-1",
+        "prompt": "Fill in the blank (from the lesson transcript): “And so my fellow Americans ___ not what your country can do for you”",
+        "options": [
+          "country",
+          "fellow",
+          "americans",
+          "ask"
+        ],
+        "correct_index": 3,
+        "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing."
+      },
+      {
+        "id": "draft-q-2",
+        "prompt": "Fill in the blank (from the lesson transcript): “And so my fellow Americans ask not what your ___ can do for you”",
+        "options": [
+          "country",
+          "ask",
+          "fellow",
+          "americans"
+        ],
+        "correct_index": 0,
+        "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing."
+      },
+      {
+        "id": "draft-q-3",
+        "prompt": "Fill in the blank (from the lesson transcript): “And so my ___ Americans ask not what your country can do for you”",
+        "options": [
+          "ask",
+          "fellow",
+          "country",
+          "americans"
+        ],
+        "correct_index": 1,
+        "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing."
+      }
+    ]
+  },
+  "lessonContent": {
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "markdown",
+        "id": "draft-md-1",
+        "markdown": "# Lesson notes (DRAFT)\n\n> Draft generated locally from the Whisper transcript. Review and edit before publishing — nothing here was sent to the cloud and no content was added beyond the transcript.\n\n- [00:00] And so my fellow Americans ask not what your country can do for you\n- [00:07] Ask what you can do for your country.\n\n## Chapters (DRAFT)\n\n- [00:00] And so my fellow Americans ask not what your country can…\n\n_Chapter titles are the opening words of each section, taken verbatim from the transcript — no topics were invented._"
+      },
+      {
+        "kind": "quiz",
+        "id": "draft-quiz-1",
+        "title": "Draft quiz — review before publishing",
+        "questions": [
+          {
+            "id": "draft-q-1",
+            "prompt": "Fill in the blank (from the lesson transcript): “And so my fellow Americans ___ not what your country can do for you”",
+            "options": [
+              "country",
+              "fellow",
+              "americans",
+              "ask"
+            ],
+            "correct_index": 3,
+            "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing."
+          },
+          {
+            "id": "draft-q-2",
+            "prompt": "Fill in the blank (from the lesson transcript): “And so my fellow Americans ask not what your ___ can do for you”",
+            "options": [
+              "country",
+              "ask",
+              "fellow",
+              "americans"
+            ],
+            "correct_index": 0,
+            "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing."
+          },
+          {
+            "id": "draft-q-3",
+            "prompt": "Fill in the blank (from the lesson transcript): “And so my ___ Americans ask not what your country can do for you”",
+            "options": [
+              "ask",
+              "fellow",
+              "country",
+              "americans"
+            ],
+            "correct_index": 1,
+            "explanation": "The transcript says: “And so my fellow Americans ask not what your country can do for you” at 00:00. DRAFT — cloze-style question generated from the transcript; review the wording before publishing."
+          }
+        ]
+      }
+    ]
+  }
+}

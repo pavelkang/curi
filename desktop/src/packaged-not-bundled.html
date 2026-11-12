@@ -1,12 +1,18 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Curi Creator — packaged web app not bundled yet</title></head>
+<head><meta charset="utf-8"><title>Curi Creator — bundled web app failed to start</title></head>
 <body style="font-family: system-ui, sans-serif; margin: 40px; color: #111827;">
-<h1>Packaged web app not bundled yet</h1>
-<p>This is a first-slice Electron shell. In packaged mode it does <strong>not</strong> yet bundle the Curi Next.js build, so it cannot show Studio from inside the installer.</p>
-<p>To use Studio now, run it in dev mode instead:</p>
+<h1>Bundled Curi web app failed to start</h1>
+<p>This packaged build is supposed to run Studio from its bundled Next.js
+server (<code>resources/curi-web/server.js</code>), with no dev server
+needed. The bundle is missing or the server did not start, so Studio
+cannot be shown.</p>
+<p>To rebuild the bundle and re-package:</p>
+<pre>cd ~/workspace/curi && npm run build
+cd ~/workspace/curi-desktop && npm run bundle:web && npm run dist:linux</pre>
+<p>Or run Studio in dev mode instead:</p>
 <pre>cd ~/workspace/curi && npm run start -- -p 3100
 cd ~/workspace/curi-desktop && npm start</pre>
-<p>Packaging the web build (Next.js standalone output or a bundled local server) into <code>resources/curi-web/</code> is the next packaging slice. See README.md in curi-desktop.</p>
+<p>See README.md in curi-desktop ("Packaged mode") for details.</p>
 </body>
 </html>

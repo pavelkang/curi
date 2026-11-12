@@ -5,50 +5,54 @@
 // cards. Courses, sections, and lessons are created from the sidebar
 // and edited on their own pages.
 
-import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/VStack";
+import { Link } from "@astryxdesign/core/Link";
 import { useStudio } from "@/lib/studio-store";
+import OfflineDraftsQueue from "@/components/OfflineDraftsQueue";
+
+// Checklist reads localStorage in its initializer, so it loads
+// client-only (ssr:false) rather than risking a hydration mismatch.
+const TeacherChecklist = dynamic(() => import("@/components/TeacherChecklist"), { ssr: false });
 
 export default function StudioHomePage() {
   const studio = useStudio();
+  // Local mounted flag, not the store's `hydrated` — see StudioShell:
+  // the provider's mount effect flips the store flag before this
+  // streamed boundary hydrates, which mismatches hydration.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  if (!studio.hydrated) return <p className="text-slate-500">Loading Studio…</p>;
+  if (!mounted) return <Text type="supporting">Loading Studio…</Text>;
   if (!studio.demoMode && !studio.userId) {
     return (
-      <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">Studio</h2>
-        <p className="text-slate-600">
-          Please <Link href="/auth" className="text-primary underline">sign in</Link> to use the Studio.
-        </p>
-      </div>
+      <VStack gap={2}>
+        <Heading level={2}>Studio</Heading>
+        <Text>
+          <Link href="/auth">Sign in</Link> to use the Studio.
+        </Text>
+      </VStack>
     );
   }
   if (!studio.demoMode && !studio.isCreator) {
     return (
-      <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">Studio</h2>
-        <p className="text-slate-600">You are signed in, but your account is not flagged as a creator yet.</p>
-        <p className="text-sm text-slate-500">
-          Creator access is manual in MVP: run the commented SQL snippet in
-          supabase/migrations/20261103_curi_init.sql for your user id, then reload this page.
-        </p>
-      </div>
+      <VStack gap={2}>
+        <Heading level={2}>Studio</Heading>
+        <Text>Your account is not flagged as a creator yet.</Text>
+      </VStack>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-3xl font-bold tracking-tight text-slate-900">Studio</h2>
-      <p className="leading-relaxed text-slate-600">
-        Pick a course in the sidebar, or press + Course to start one. Sections are folders,
-        lessons are files inside them. Click a lesson to fill in its page on its own.
-      </p>
-      {studio.demoMode && (
-        <p className="text-sm text-slate-500">
-          Demo mode: courses you create here are stored in this browser only, not in Supabase,
-          and do not appear on the learner course list.
-        </p>
-      )}
-      {studio.error && <p className="text-sm text-red-700">{studio.error}</p>}
-    </div>
+    <VStack gap={4}>
+      <Heading level={2}>Studio</Heading>
+      <Text type="supporting">Pick a course in the sidebar, or press + Course to start one.</Text>
+      {studio.error && <Text>{studio.error}</Text>}
+      <TeacherChecklist />
+      <OfflineDraftsQueue />
+    </VStack>
   );
 }

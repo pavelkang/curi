@@ -9,6 +9,17 @@
       "src/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "resources/curi-web",
+        "to": "curi-web"
+      }
+    ],
+    "linux": {
+      "category": "Utility",
+      "icon": "build/icon.png",
+      "target": "AppImage"
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.png",
@@ -27,7 +38,7 @@
   "dependencies": {
     "@xenova/transformers": "^2.17.2"
   },
-  "description": "Curi Creator \u2014 desktop creator app for Curi: Studio, OBS-file import, and local captions. First slice.",
+  "description": "Curi Creator \u2014 desktop creator app for Curi: Studio, OBS-file import, local captions, AI drafts, and in-app screen/camera capture.",
   "devDependencies": {
     "electron": "^32.2.0",
     "electron-builder": "^25.1.8"
@@ -36,8 +47,10 @@
   "main": "src/main.js",
   "name": "curi-creator",
   "scripts": {
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/caption-worker.js && node --check src/captions-renderer.js && node scripts/check-shared.js",
+    "bundle:web": "bash scripts/bundle-web.sh",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/caption-worker.js && node --check src/ai-drafts.js && node --check src/captions-renderer.js && node --check src/capture-renderer.js && node scripts/check-shared.js",
     "dist": "electron-builder",
+    "dist:linux": "electron-builder --linux",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
     "start": "electron .",

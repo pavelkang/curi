@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/VStack";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Selector } from "@astryxdesign/core/Selector";
 
 // In-browser recording: screen + camera headshot, composited on a canvas.
 // - Screen: getDisplayMedia (video; audio if the browser/share allows it)
@@ -23,12 +26,21 @@ import { Label } from "@/components/ui/label";
 
 type Mode = "screen-camera" | "screen-only" | "camera-only";
 
-export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; onUploaded?: (info: { uploadId: string }) => void }) {
+export default function Recorder({ lessonId, onUploaded, onLocalVideo }: {
+  lessonId?: string;
+  onUploaded?: (info: { uploadId: string }) => void;
+  // Demo mode: called with the recorded blob when the teacher saves
+  // the take in this browser. The caller persists it (IndexedDB) and
+  // attaches it to the lesson's video block.
+  onLocalVideo?: (blob: Blob) => void;
+}) {
   const [mode, setMode] = useState<Mode>("screen-camera");
   const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const startTimeRef = useRef<number>(0);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
@@ -46,6 +58,17 @@ export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; 
   };
 
   useEffect(() => () => { stopTracks(); if (previewUrl) URL.revokeObjectURL(previewUrl); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Recording timer: ticks once a second while recording.
+  useEffect(() => {
+    if (!recording) return;
+    const timer = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [recording]);
+
+  const formatElapsed = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const drawLoop = () => {
     const canvas = canvasRef.current;
@@ -130,6 +153,8 @@ export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; 
       };
       recorderRef.current = recorder;
       recorder.start(250);
+      startTimeRef.current = Date.now();
+      setElapsed(0);
       setRecording(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start recording. Check screen/camera/mic permissions.");
@@ -142,15 +167,24 @@ export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; 
     setRecording(false);
   };
 
+  const saveLocal = () => {
+    const blob = blobRef.current;
+    if (!blob) return;
+    onLocalVideo?.(blob);
+    setStatus(`Take saved in this browser (${(blob.size / 1_000_000).toFixed(1)} MB). Save the lesson to keep it.`);
+  };
+
   const upload = async () => {
     const blob = blobRef.current;
     if (!blob) return;
     if (!isSupabaseConfigured) {
-      setError("Demo mode: video upload needs Mux and Supabase. Recording preview and retake still work locally.");
+      // Unreachable in the UI (the upload button is hidden in demo
+      // mode), kept as a guard so a take is never silently dropped.
+      setError("Video upload needs a connection. In demo mode, save the take in this browser instead.");
       return;
     }
     setError("");
-    setStatus("Creating Mux upload…");
+    setStatus("Creating upload…");
     try {
       const res = await fetch("/api/mux/uploads", {
         method: "POST",
@@ -159,10 +193,10 @@ export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; 
       });
       if (!res.ok) throw new Error(`Upload creation failed (${res.status}): ${await res.text()}`);
       const { uploadUrl, uploadId } = (await res.json()) as { uploadUrl: string; uploadId: string };
-      setStatus("Uploading to Mux…");
+      setStatus("Uploading…");
       const put = await fetch(uploadUrl, { method: "PUT", body: blob });
-      if (!put.ok) throw new Error(`Mux upload failed (${put.status})`);
-      setStatus("Uploaded. Mux is processing. Playback will appear after the webhook stores it, or paste the playback id manually in the Studio.");
+      if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+      setStatus("Uploaded. Processing takes a few minutes.");
       onUploaded?.({ uploadId });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed.");
@@ -172,44 +206,45 @@ export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; 
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Record in browser</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="space-y-1">
-            <Label>Mode</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as Mode)} disabled={recording}>
-              <SelectTrigger className="w-[240px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="screen-camera">Screen + camera headshot</SelectItem>
-                <SelectItem value="screen-only">Screen only</SelectItem>
-                <SelectItem value="camera-only">Camera only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <VStack gap={4}>
+        <Heading level={3}>Record in browser</Heading>
+        <HStack gap={3} vAlign="end">
+          <Selector
+            label="Mode"
+            value={mode}
+            onChange={(v) => setMode(v as Mode)}
+            options={[
+              { value: "screen-camera", label: "Screen + camera" },
+              { value: "screen-only", label: "Screen only" },
+              { value: "camera-only", label: "Camera only" },
+            ]}
+            isDisabled={recording}
+            width={240}
+          />
           {!recording ? (
-            <Button onClick={start}>Start recording</Button>
+            <Button label="Start recording" onClick={start} />
           ) : (
-            <Button onClick={stop}>Stop recording</Button>
+            <>
+              <Button label="Stop recording" onClick={stop} />
+              <Text weight="semibold" aria-live="off">Recording {formatElapsed(elapsed)}</Text>
+            </>
+          )}
+          {previewUrl && !isSupabaseConfigured && (
+            <Button label="Save take in this browser" onClick={saveLocal} />
+          )}
+          {previewUrl && isSupabaseConfigured && (
+            <Button label="Upload recording" variant="secondary" onClick={upload} />
           )}
           {previewUrl && (
-            <Button variant="outline" onClick={upload} disabled={!isSupabaseConfigured}>
-              Upload recording to Mux
-            </Button>
+            <Button
+              label="Retake"
+              variant="ghost"
+              onClick={() => { setPreviewUrl(null); blobRef.current = null; setStatus(""); }}
+            />
           )}
-          {previewUrl && (
-            <Button variant="ghost" onClick={() => { setPreviewUrl(null); blobRef.current = null; setStatus(""); }}>
-              Retake
-            </Button>
-          )}
-        </div>
+        </HStack>
         {!isSupabaseConfigured && (
-          <p className="text-sm text-base-content/60">
-            Demo mode: upload to Mux is disabled. Recording preview and retake work locally.
-          </p>
+          <Text type="supporting">Takes are saved in this browser only.</Text>
         )}
         {/* Hidden source videos feed the canvas; the canvas is the preview. */}
         <video ref={screenVideoRef} muted playsInline className="hidden" />
@@ -217,14 +252,14 @@ export default function Recorder({ lessonId, onUploaded }: { lessonId?: string; 
         <canvas ref={canvasRef} width={1280} height={720} className="w-full max-w-2xl rounded-lg bg-black" />
         {previewUrl && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Preview</p>
+            <Text weight="semibold">Preview</Text>
             <video src={previewUrl} controls className="w-full max-w-2xl rounded-lg" />
           </div>
         )}
-        {status && <p className="text-sm text-base-content/60">{status}</p>}
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <p className="text-sm text-base-content/60">No trimming in MVP. If a take is wrong, retake it.</p>
-      </CardContent>
+        {status && <Text type="supporting">{status}</Text>}
+        {error && <p className="text-sm text-error">{error}</p>}
+        <Text type="supporting">No trimming. If a take is wrong, retake it.</Text>
+      </VStack>
     </Card>
   );
 }

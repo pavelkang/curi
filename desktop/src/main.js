@@ -7,22 +7,129 @@
 // Dev mode: loads the Curi web app from a local server. Start it first:
 //   cd ~/workspace/curi && npm run start -- -p 3100
 // then run this app with:  npm start
-// Packaged mode is NOT faked here: if app.isPackaged and no bundled
-// web build is present, the window shows a local explanation page
-// instead of pretending the Studio is bundled. See README.md.
+// Packaged mode: spawns the bundled Next.js standalone server from
+// resources/curi-web/server.js (copied by scripts/bundle-web.sh) using
+// the Electron binary as Node (ELECTRON_RUN_AS_NODE=1), waits for its
+// local port to respond, then loads Studio from it — no dev server.
+// Only if the bundle is missing or the server fails to start does the
+// window show src/packaged-not-bundled.html. See README.md.
 
-const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, shell, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const net = require('net');
 const { spawn } = require('child_process');
+// AI drafts (Step 2): pure deterministic transcript-derived drafts, no
+// native deps, so main can require it directly — no worker spawn needed.
+const { generateDrafts } = require('./ai-drafts');
 
 const STUDIO_URL = process.env.CURI_STUDIO_URL || 'http://localhost:3100/studio';
-const BUNDLED_WEB_INDEX = path.join(process.resourcesPath || '', 'curi-web', 'index.html');
+// Bundled Next.js standalone server (copied by scripts/bundle-web.sh):
+//   resources/curi-web/server.js  (+ .next/, node_modules/, public/)
+const BUNDLED_WEB_DIR = path.join(process.resourcesPath || '', 'curi-web');
+const BUNDLED_WEB_SERVER = path.join(BUNDLED_WEB_DIR, 'server.js');
+
+// In packaged mode this becomes http://127.0.0.1:<port> once the bundled
+// server is up; in dev mode it stays STUDIO_URL. Menu actions use
+// getStudioUrl() so they point at whichever server is actually serving.
+let bundledBaseUrl = null;
+let bundledServer = null;
+
+function getStudioUrl() {
+  return bundledBaseUrl ? `${bundledBaseUrl}/studio` : STUDIO_URL;
+}
+function getLearnerUrl() {
+  return bundledBaseUrl || STUDIO_URL.replace(/\/studio\/?$/, '') || 'http://localhost:3100';
+}
+
+// Pick a free localhost port for the bundled server (probe with a
+// throwaway listener, then release it — the spawn follows immediately).
+function pickFreePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const port = probe.address().port;
+      probe.close(() => resolve(port));
+    });
+  });
+}
+
+function waitForServer(baseUrl, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve) => {
+    const attempt = () => {
+      const req = http.get(`${baseUrl}/studio`, { timeout: 2000 }, (res) => {
+        res.resume();
+        resolve(res.statusCode >= 200 && res.statusCode < 500);
+      });
+      req.on('timeout', () => req.destroy());
+      req.on('error', () => {
+        if (Date.now() > deadline) return resolve(false);
+        setTimeout(attempt, 250);
+      });
+    };
+    attempt();
+  });
+}
+
+// Spawn the bundled Next.js standalone server using the Electron binary
+// itself as Node (ELECTRON_RUN_AS_NODE=1). Verified on this VM: the
+// Electron binary serves /studio with HTTP 200 from resources/curi-web.
+// Returns the base URL once the port responds, or null on failure.
+async function startBundledServer() {
+  if (!fs.existsSync(BUNDLED_WEB_SERVER)) {
+    console.error(`[curi-creator] bundled web server not found: ${BUNDLED_WEB_SERVER}`);
+    return null;
+  }
+  let port;
+  try {
+    port = await pickFreePort();
+  } catch (e) {
+    console.error(`[curi-creator] could not pick a free port: ${e.message}`);
+    return null;
+  }
+  const baseUrl = `http://127.0.0.1:${port}`;
+  bundledServer = spawn(process.execPath, [BUNDLED_WEB_SERVER], {
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
+      PORT: String(port),
+      HOSTNAME: '127.0.0.1',
+    },
+  });
+  bundledServer.stdout.on('data', (d) => console.log(`[bundled-web] ${d.toString().trim()}`));
+  bundledServer.stderr.on('data', (d) => console.error(`[bundled-web] ${d.toString().trim()}`));
+  bundledServer.on('error', (err) => {
+    console.error(`[curi-creator] bundled server failed to start: ${err.message}`);
+  });
+  const up = await waitForServer(baseUrl);
+  if (!up) {
+    console.error(`[curi-creator] bundled server did not respond on ${baseUrl} within 30s`);
+    stopBundledServer();
+    return null;
+  }
+  console.log(`[curi-creator] bundled web server up at ${baseUrl}`);
+  return baseUrl;
+}
+
+function stopBundledServer() {
+  if (!bundledServer) return;
+  const child = bundledServer;
+  bundledServer = null;
+  try { process.kill(-child.pid, 'SIGTERM'); } catch (_) { /* not a group leader */ }
+  try { child.kill('SIGTERM'); } catch (_) { /* already gone */ }
+  setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) { /* already gone */ } }, 3000);
+}
 
 let mainWindow = null;
 let captionsWindow = null;
+let captureWindow = null;
 
-function createMainWindow() {
+async function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 1000,
@@ -35,13 +142,18 @@ function createMainWindow() {
     },
   });
 
-  if (app.isPackaged && fs.existsSync(BUNDLED_WEB_INDEX)) {
-    mainWindow.loadFile(BUNDLED_WEB_INDEX);
-  } else if (app.isPackaged) {
-    // Honest packaged-mode fallback for this first slice: the web
-    // build is not yet bundled into the installer (see README.md,
-    // "Packaged mode, later"). Do not silently load a remote URL.
-    mainWindow.loadFile(path.join(__dirname, 'packaged-not-bundled.html'));
+  if (app.isPackaged) {
+    // Packaged mode: run the bundled Next.js standalone server (no dev
+    // server needed) and load Studio from it. Only if the bundle is
+    // missing or the server fails to start do we fall back to the
+    // explanation page — that is a genuine failure path now, not the
+    // normal packaged behaviour. See README.md, "Packaged mode".
+    bundledBaseUrl = await startBundledServer();
+    if (bundledBaseUrl) {
+      mainWindow.loadURL(`${bundledBaseUrl}/studio`);
+    } else {
+      mainWindow.loadFile(path.join(__dirname, 'packaged-not-bundled.html'));
+    }
   } else {
     mainWindow.loadURL(STUDIO_URL);
   }
@@ -76,8 +188,9 @@ function createCaptionsWindow() {
   }
   captionsWindow = new BrowserWindow({
     width: 760,
-    height: 720,
-    title: 'Curi Creator — Local Captions',
+    // Taller in demo mode so the drafts section is visible in the capture.
+    height: process.env.CURI_CAPTIONS_DEMO_FILE ? 1180 : 720,
+    title: 'Curi Creator — Local Captions & AI Drafts',
     parent: mainWindow || undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -88,7 +201,104 @@ function createCaptionsWindow() {
   });
   captionsWindow.loadFile(path.join(__dirname, 'captions.html'));
   captionsWindow.on('closed', () => { captionsWindow = null; });
+  // Verification hook only (env-gated, never in normal use): when
+  // CURI_CAPTIONS_DEMO_FILE is set, drive the real captions UI flow
+  // (transcribe -> drafts) for that file, then capture the drafts UI
+  // to CURI_CAPTIONS_SCREENSHOT_PATH if set. This is how the Step 2
+  // UI was screenshotted on a headless Linux VM (under xvfb).
+  captionsWindow.webContents.on('did-finish-load', async () => {
+    const demoFile = process.env.CURI_CAPTIONS_DEMO_FILE;
+    if (!demoFile) return;
+    try {
+      const outcome = await captionsWindow.webContents.executeJavaScript(
+        `window.curiCaptions && window.curiCaptions.demo(${JSON.stringify(demoFile)})`,
+      );
+      console.log(`[curi-creator] captions demo: ${outcome}`);
+      // Prove the UI state independently of the pixels: report what
+      // the textareas actually contain after the flow.
+      const state = await captionsWindow.webContents.executeJavaScript(
+        `({ vttChars: document.getElementById('vtt').value.length, ` +
+        `notesChars: document.getElementById('notes-md').value.length, ` +
+        `quizChars: document.getElementById('quiz-json').value.length, ` +
+        `draftsStatus: document.getElementById('drafts-status').textContent })`,
+      );
+      console.log(`[curi-creator] captions demo UI state: ${JSON.stringify(state)}`);
+      // Let the compositor present the final frame (headless xvfb can
+      // otherwise capture a stale frame), scroll the drafts into view.
+      await new Promise((r) => setTimeout(r, 3000));
+      await captionsWindow.webContents.executeJavaScript(
+        `document.getElementById('drafts-section').scrollIntoView(); 'scrolled'`,
+      );
+      await new Promise((r) => setTimeout(r, 1000));
+    } catch (e) {
+      console.error(`[curi-creator] captions demo failed: ${e.message}`);
+    }
+    const shotPath = process.env.CURI_CAPTIONS_SCREENSHOT_PATH;
+    if (shotPath) {
+      try {
+        const image = await captionsWindow.webContents.capturePage();
+        fs.writeFileSync(shotPath, image.toPNG());
+        console.log(`[curi-creator] captions screenshot saved to ${shotPath}`);
+      } catch (e) {
+        console.error(`[curi-creator] captions screenshot failed: ${e.message}`);
+      }
+    }
+  });
   return captionsWindow;
+}
+
+function createCaptureWindow() {
+  if (captureWindow && !captureWindow.isDestroyed()) {
+    captureWindow.focus();
+    return captureWindow;
+  }
+  captureWindow = new BrowserWindow({
+    width: 900,
+    height: 1000,
+    title: 'Curi Creator — Record Screen + Camera',
+    parent: mainWindow || undefined,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+  captureWindow.loadFile(path.join(__dirname, 'capture.html'));
+  captureWindow.on('closed', () => { captureWindow = null; });
+  // Verification hook only (env-gated, never in normal use): when
+  // CURI_CAPTURE_DEMO_MS is set, drive a real screen-only capture
+  // headlessly, then capture the Capture UI to
+  // CURI_CAPTURE_SCREENSHOT_PATH if set. This is how Step 3 was
+  // verified on a headless Linux VM (under xvfb).
+  captureWindow.webContents.on('did-finish-load', async () => {
+    const demoMs = process.env.CURI_CAPTURE_DEMO_MS;
+    if (!demoMs) return;
+    try {
+      const outcome = await captureWindow.webContents.executeJavaScript(
+        `window.curiCapture && window.curiCapture.demo(${JSON.stringify(Number(demoMs) || 5000)})`,
+      );
+      console.log(`[curi-creator] capture demo: ${outcome}`);
+      const state = await captureWindow.webContents.executeJavaScript(
+        `window.curiCapture ? window.curiCapture.state() : null`,
+      );
+      console.log(`[curi-creator] capture demo state: ${JSON.stringify(state)}`);
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch (e) {
+      console.error(`[curi-creator] capture demo failed: ${e.message}`);
+    }
+    const shotPath = process.env.CURI_CAPTURE_SCREENSHOT_PATH;
+    if (shotPath) {
+      try {
+        const image = await captureWindow.webContents.capturePage();
+        fs.writeFileSync(shotPath, image.toPNG());
+        console.log(`[curi-creator] capture screenshot saved to ${shotPath}`);
+      } catch (e) {
+        console.error(`[curi-creator] capture screenshot failed: ${e.message}`);
+      }
+    }
+  });
+  return captureWindow;
 }
 
 function buildMenu() {
@@ -98,6 +308,11 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
+        {
+          label: 'Record Screen + Camera…',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => createCaptureWindow(),
+        },
         {
           label: 'Open Video for Local Captions…',
           accelerator: 'CmdOrCtrl+O',
@@ -115,9 +330,13 @@ function buildMenu() {
           click: () => createCaptionsWindow(),
         },
         {
+          label: 'Record Screen + Camera…',
+          click: () => createCaptureWindow(),
+        },
+        {
           label: 'Open Curi Studio (creator)',
           click: () => {
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(STUDIO_URL);
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(getStudioUrl());
           },
         },
         {
@@ -127,8 +346,7 @@ function buildMenu() {
           label: 'Open Learner Home (student)',
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
-              const base = STUDIO_URL.replace(/\/studio\/?$/, '') || 'http://localhost:3100';
-              mainWindow.loadURL(`${base}/`);
+              mainWindow.loadURL(`${getLearnerUrl()}/`);
             }
           },
         },
@@ -147,13 +365,13 @@ function buildMenu() {
               type: 'info',
               title: 'About Curi Creator',
               message: 'Curi Creator 0.1.0 (first slice)',
-              detail: 'Desktop creator app for Curi. Studio + OBS-file import + local Whisper captions. See README.md in curi-desktop for what is and is not verified.',
+              detail: 'Desktop creator app for Curi. Studio + OBS-file import + local Whisper captions + local AI drafts (notes, chapters, quiz) + in-app screen/camera capture. See README.md in curi-desktop for what is and is not verified.',
             });
           },
         },
         {
           label: 'Open Curi Studio in Browser',
-          click: () => shell.openExternal(STUDIO_URL),
+          click: () => shell.openExternal(getStudioUrl()),
         },
       ],
     },
@@ -229,14 +447,93 @@ ipcMain.handle('curi:transcribe', async (_event, filePath) => {
   });
 });
 
+// --- AI drafts IPC (Step 2) -------------------------------------------
+// Renderer -> main: 'curi:generate-drafts' takes a transcript object
+//   { segments: [{start, end, text}], text }
+// (the shape the transcribe handler returns) and returns
+//   { ok: true, drafts } or { ok: false, error }.
+// Drafts are deterministic and transcript-derived (src/ai-drafts.js):
+// no LLM, no cloud, no network. They are returned for the teacher to
+// edit and copy into Studio — this handler never writes to Supabase
+// or to Studio's store, and nothing is published automatically.
+ipcMain.handle('curi:generate-drafts', async (_event, transcript) => {
+  try {
+    const drafts = generateDrafts(transcript);
+    return { ok: true, drafts };
+  } catch (e) {
+    return { ok: false, error: e && e.message ? e.message : String(e) };
+  }
+});
+
+// --- Desktop capture IPC (Step 3) --------------------------------------
+// Recordings folder: app.getPath('videos') + 'Curi Creator'
+// (~/Videos/Curi Creator on Linux/Mac; Videos\Curi Creator on
+// Windows). No user-specific path is hardcoded; the folder is created
+// on first save. Renderer -> main:
+//   'curi:capture-sources' -> { ok, sources: [{id, name, thumbnail}] }
+//   'curi:capture-save' (ArrayBuffer, filename) -> { ok, path, dir, size }
+//   'curi:capture-recordings-dir' -> { ok, dir }
+//   'curi:capture-open-recording' (path) -> reveals the file in its folder.
+function getRecordingsDir() {
+  try {
+    return path.join(app.getPath('videos'), 'Curi Creator');
+  } catch (_) {
+    return path.join(app.getPath('userData'), 'Recordings');
+  }
+}
+
+ipcMain.handle('curi:capture-sources', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+    });
+    return {
+      ok: true,
+      sources: sources.map((s) => ({ id: s.id, name: s.name, thumbnail: s.thumbnail ? s.thumbnail.toDataURL() : '' })),
+    };
+  } catch (e) {
+    return { ok: false, error: e && e.message ? e.message : String(e) };
+  }
+});
+
+ipcMain.handle('curi:capture-recordings-dir', async () => ({ ok: true, dir: getRecordingsDir() }));
+
+ipcMain.handle('curi:capture-save', async (_event, arrayBuffer, filename) => {
+  try {
+    if (!arrayBuffer) return { ok: false, error: 'No recording data received.' };
+    const dir = getRecordingsDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const safe = String(filename || 'curi-recording.webm').replace(/[^A-Za-z0-9._-]/g, '_');
+    const filePath = path.join(dir, safe);
+    const buf = Buffer.from(arrayBuffer);
+    fs.writeFileSync(filePath, buf);
+    return { ok: true, path: filePath, dir, size: buf.length };
+  } catch (e) {
+    return { ok: false, error: e && e.message ? e.message : String(e) };
+  }
+});
+
+ipcMain.handle('curi:capture-open-recording', async (_event, filePath) => {
+  if (filePath && fs.existsSync(filePath)) shell.showItemInFolder(filePath);
+  return { ok: true };
+});
+
 app.whenReady().then(() => {
   buildMenu();
   createMainWindow();
+  // Verification hook only: CURI_CAPTIONS_DEMO_FILE opens the captions
+  // window at startup so the demo hook above can drive it headlessly.
+  if (process.env.CURI_CAPTIONS_DEMO_FILE) createCaptionsWindow();
+  if (process.env.CURI_CAPTURE_DEMO_MS) createCaptureWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
 });
 
 app.on('window-all-closed', () => {
+  stopBundledServer();
   if (process.platform !== 'darwin') app.quit();
 });
+
+app.on('before-quit', () => stopBundledServer());
