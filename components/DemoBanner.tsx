@@ -5,7 +5,10 @@
 import {Banner} from "@astryxdesign/core/Banner";
 
 export default function DemoBanner() {
-  const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
   if (configured) return null;
   return (
     <Banner

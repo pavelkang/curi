@@ -180,7 +180,7 @@ demo, and live mode is unchanged when keys are present.
 
 See `.env.example`. Summary:
 
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase project.
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase project.
 - `SUPABASE_SERVICE_ROLE_KEY` — server only, for the Mux webhook handler.
 - `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` — server only, for `/api/mux/*`.
 - `MUX_WEBHOOK_SECRET` — server only, Mux webhook signing secret.
