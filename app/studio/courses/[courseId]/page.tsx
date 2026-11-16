@@ -153,7 +153,8 @@ export default function StudioCoursePage() {
           >
             Preview as learner (new tab) ↗
           </AstryxLink>
-          <Text type="supporting">{course.published ? "published" : "draft"}</Text>
+          {/* No published/draft word here: the Publish/Unpublish
+              button label already says which state the course is in. */}
           {courseDirty ? (
             <Text weight="semibold">Unsaved changes</Text>
           ) : (

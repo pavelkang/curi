@@ -290,3 +290,48 @@ All 5 tasks done unaided, checklist 5/5. Stalls from removed labels / icon-only 
 **5 of 5 tasks done unaided, 9 of 9 fixes verified fixed on screen.** Checklist 5/5. Per-fix evidence: (1) grey pill "Clear whiteboard" button with 1px border under the canvas next to "Record whiteboard"; (2) red pill "Delete question" directly under its question (nit: label wraps to two lines, icon above text); (3) exact "Preview as learner (new tab)" wording on course page, lesson editor, and checklist item 4, genuinely opens a new tab; (4) "Remove video" under the player (nit: plain unstyled text link, not a button — easy to miss); (5) exact "Video attached…" wording immediately after upload and after a full reload (native "No file chosen" still shows underneath — unavoidable native control); (6) after publish sidebar "Offline drafts: 0" and card "No offline drafts yet."; (7) no duplicate demo line under the checklist before or after publish; (8) "Section name" label directly above the input; (9) no "In section:" anywhere; "Move to section" shows "Getting Started". Screenshots: `screenshots-text-strip/eval-round2/` (21, all read back visually).
 
 New polish items (not part of the 9 fixes, left for a future pass): TLDraw toolbar icons render as blank grey squares in headless Chromium (icon-only, no labels); block-level delete (red trash) and ↑/↓ reorder buttons remain icon-only on every block; "Delete question" label wraps; "Remove video" has no button chrome; learner "Check answer" renders pale/lavender until an option is picked (correct disabled state, but may read as broken). Evaluator retracted two suspected issues on re-check: nav "Courses" correctly points to `/`, and the lesson page does not re-render the course form below the blocks.
+
+---
+
+## Icon-trim pass 2 (2026-11-16, Kai, voice: "The UI is still a little bit too verbose... for some text next to icons, the text doesn't need to exist because the icon is enough.")
+
+### Builder pass — before → after visible words (document.body.innerText, same 10 captures, same script)
+
+| Screen | Before | After |
+|---|---|---|
+| Learner home, empty | 20 | 20 |
+| Studio home, empty | 76 | 76 |
+| Auth (demo) | 40 | 27 |
+| Studio course page | 58 | 57 |
+| Lesson editor (top / blocks) | 170 | 170 |
+| Whiteboard block | 170 | 170 |
+| Learner home, published mock | 22 | 22 |
+| Learner course | 36 | 36 |
+| Learner lesson | 40 | 40 |
+| Learner lesson, quiz answered | 54 | 54 |
+| **Total** | **686** | **672 (−14, ~2%)** |
+
+Method note: the count script (`/tmp/curi-walk2/count.mjs`, mock course "Icon Trim Mock" created through the real Studio UI) is a fresh rewrite — the pass-1 scripts were lost when /tmp was wiped on VM restart. The 686 baseline is NOT comparable to pass 1's 818: the mock differs (fewer words in descriptions/lessons). The comparable number is the same-script delta, −14. Environment wrinkle: a `.env.local` with the real Supabase publishable key was sitting in the tree (from the publishable-key verification earlier the same day), so the first count run came out in live mode (Studio demanding sign-in). It was moved aside for demo-mode counts and restored afterwards; `NEXT_PUBLIC_*` vars are inlined at build time, so each count ran on a fresh build.
+
+Honest finding: the icon+text surface is nearly exhausted after pass 1. A full audit of every component found only four places where text sat next to an icon or duplicated an adjacent signal. Everything else left is text-only labels that carry meaning. The four changes:
+
+1. **Auth (demo): removed a duplicate sentence (−13).** "Demo mode — sign-in is not available yet." and "No backend is connected, so there is no account to sign in to." said the same thing twice. The first line stays. (`app/auth/page.tsx`)
+2. **Studio course page: removed the "published"/"draft" status word (−1).** The Publish/Unpublish button label already encodes the state (it shows the opposite action). (`app/studio/courses/[courseId]/page.tsx`)
+3. **Learner course rows: removed the green "Done" badge** — reverted in the fix round below; the check icon alone was not enough.
+4. **Learner lesson header: removed the green "Done" badge** — reverted in the fix round below.
+
+Deliberately kept (audited, not changed): "Delete question" labelled red destructive button; "Clear whiteboard" labelled button; block kind labels ("Video"/"Text"/"Quiz"/"Whiteboard") anchoring the ↑/↓/trash controls — the pass-1 evaluator flagged delete-scope ambiguity without them; quiz "Correct" radio labels (4 per question — the radio's meaning is ambiguous without the word); "Move to section" text (form label for the dropdown); "Preview as learner (new tab) ↗" (the "(new tab)" wording is a verified fix from pass 1 — the ↗ alone confused the evaluator); "Back to course(s)" as text — considered converting to a ← icon-only button, rejected: 3 words saved against a real ambiguity risk, and the ↗ precedent says a lone directional glyph confuses first-time users; "Recording adds a video block after this one." (non-obvious consequence, prevents confusion when a block appears); "Video attached — choose a file below to replace it." (verified fix from pass 1); quiz feedback ("Correct"/"Not quite…", scores), "Choose the correct answer.", save/publish controls, "Unsaved changes"/"Saved.", "+ Course"/"+ Section"/"+ Lesson" and "+ … block" buttons, checklist steps, counts, empty states, the demo banner, "Captions here stay in this lesson; they are not sent to Mux.", recorder actions/statuses. Whiteboard components untouched (the "disappears" bug is a separate open investigation). No behavior, routes, data flow, or Supabase/Mux code changed.
+
+Verification: `npx tsc --noEmit` pass, `npm run build` pass (13/13). Screenshots: `screenshots-icon-trim-2/before/` and `after/` (10 each + after-only `11-learner-lesson-done.png`, `12-learner-course-done.png`).
+
+### Evaluator (separate agent, first-time teacher, fresh build, mock "Baking Basics")
+
+**All 5 tasks done unaided, checklist 5/5.** (1) Create course — "+ Course" → typed "Baking Basics" → Save; 0 → 1 of 5. (2) Video — "+ Video block", attached the test webm via the file input; "Video saved in this browser", playable in learner view (2.003 s, readyState 4); 1 → 2 of 5. (3) Quiz — filled one question, marked 200°C correct; rendered correctly as a learner; 2 → 3 of 5. (4) Preview as learner — new tab, "Back to course" worked; 3 → 4 of 5. (5) Publish — button flipped to "Unpublish", drafts 2 → 0, checklist 5/5; course listed on learner home. Screenshots: `screenshots-icon-trim-2/eval/` (25 + done-state check 50–55).
+
+**Done-state verdict: the badge removals were a real regression, not cosmetic.** After marking a lesson done, the only signals were the tiny play-circle → check-circle glyph swap on the row, the "N marked done" header count, and the button flipping to "Mark as not done" — no "Done" word on the row or the lesson header. With one lesson the count line saves it; with many lessons, telling which are done means scanning tiny glyphs row by row. Fixed in the fix round below.
+
+Other stalls, ranked (all pre-existing except #2, none caused by this pass's kept changes): (1) quiz checklist ticks on an empty quiz block — known honesty note from pass 1, still unfixed (ticks on block-add, not content); (2) done state has no "Done" text — this pass, fixed; (3) icon-only ↑/↓ reorder arrows, ambiguous next to "Move to section"; (4) icon-only red trash delete-block, no text label (DOM has "Delete block" text; visually glyph-only); (5) tiny ▾ sidebar expand chevrons; (6) "+ Course" creates "Untitled course" with no name dialog — a beat spent looking for one; (7) two "Save lesson" buttons (top + bottom); (8) checklist detail only on Studio home — course/lesson pages show only the "N of 5 done" pill; (9) lesson-page preview opens the lesson directly, not the course overview; (10) video block's "Record in browser" is more prominent than the file upload below it. No dead ends, no console/page errors.
+
+### Fix round (evaluator finding #2)
+
+Both "Done" badge removals reverted: the green success badge is back on learner course rows (`components/CourseDetail.tsx`) and on the learner lesson header (`components/LessonDetail.tsx`, Badge import restored), each with a comment citing the evaluator evidence. Verified with a dedicated script (`/tmp/curi-walk2/done-check.mjs`, mock "Done Check"): lesson header shows the Done badge, course row shows it, header count reads "1 marked done" (screenshots `after/11-learner-lesson-done.png`, `after/12-learner-course-done.png`). After-count re-run after the revert: still 672 — the count flow never marks a lesson done, so the restored conditional badges never render in it; the −14 measured total stands, and the badges cost 1 word per completed lesson row + 1 on a completed lesson's header when they do appear. `npx tsc --noEmit` pass, `npm run build` pass (13/13) after the revert.

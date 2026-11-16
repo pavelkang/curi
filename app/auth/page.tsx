@@ -46,7 +46,6 @@ export default function AuthPage() {
           <Heading level={1}>Welcome to Curi</Heading>
           <Text type="supporting">Demo mode — sign-in is not available yet.</Text>
         </VStack>
-        <Text type="supporting">No backend is connected, so there is no account to sign in to.</Text>
         <div>
           <Button label="Try the Studio" href="/studio" />
         </div>

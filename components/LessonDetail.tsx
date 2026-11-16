@@ -213,6 +213,11 @@ export default function LessonDetail({ courseId: id, lessonId }: { courseId: str
           <Button label="Back to course" variant="ghost" size="sm" href={`/courses/${id}`} />
           <div className="flex flex-wrap items-center gap-2">
             <Heading level={1}>{shownTitle}</Heading>
+            {/* The "Done" badge stays: with the badge removed, the
+                only done signal on this page was the button flipping
+                to "Mark as not done" — the evaluator (icon-trim pass
+                2) found that not obvious. The sidebar check icon is
+                the second signal, not the only one. */}
             {done && <Badge label="Done" variant="success" />}
           </div>
         </div>
