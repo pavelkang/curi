@@ -49,7 +49,6 @@ export default function StudioHomePage() {
   return (
     <VStack gap={4}>
       <Heading level={2}>Studio</Heading>
-      <Text type="supporting">Pick a course in the sidebar, or press + Course to start one.</Text>
       {studio.error && <Text>{studio.error}</Text>}
       <TeacherChecklist />
       <OfflineDraftsQueue />

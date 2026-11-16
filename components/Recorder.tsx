@@ -243,22 +243,17 @@ export default function Recorder({ lessonId, onUploaded, onLocalVideo }: {
             />
           )}
         </HStack>
-        {!isSupabaseConfigured && (
-          <Text type="supporting">Takes are saved in this browser only.</Text>
-        )}
         {/* Hidden source videos feed the canvas; the canvas is the preview. */}
         <video ref={screenVideoRef} muted playsInline className="hidden" />
         <video ref={cameraVideoRef} muted playsInline className="hidden" />
         <canvas ref={canvasRef} width={1280} height={720} className="w-full max-w-2xl rounded-lg bg-black" />
         {previewUrl && (
           <div className="space-y-2">
-            <Text weight="semibold">Preview</Text>
             <video src={previewUrl} controls className="w-full max-w-2xl rounded-lg" />
           </div>
         )}
         {status && <Text type="supporting">{status}</Text>}
         {error && <p className="text-sm text-error">{error}</p>}
-        <Text type="supporting">No trimming. If a take is wrong, retake it.</Text>
       </VStack>
     </Card>
   );

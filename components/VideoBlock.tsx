@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { Play } from "lucide-react";
 import type { VideoBlock as VideoBlockType } from "@/lib/content";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { getLocalVideoUrl } from "@/lib/local-video";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@astryxdesign/core/Badge";
 import { Heading } from "@astryxdesign/core/Heading";
 import { Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/VStack";
@@ -78,7 +76,6 @@ export default function VideoBlock({ block }: { block: VideoBlockType }) {
         <video controls src={localUrl} className="w-full overflow-hidden rounded-lg border border-border bg-black" preload="metadata">
           Your browser does not support video playback.
         </video>
-        <Text type="supporting">Saved in this browser only.</Text>
       </div>
     );
   }
@@ -99,7 +96,6 @@ export default function VideoBlock({ block }: { block: VideoBlockType }) {
         <VStack gap={3}>
           <div className="flex items-center justify-between gap-2">
             <Heading level={3}>{block.title ?? "Video"}</Heading>
-            {!isSupabaseConfigured && <Badge label="Demo" variant="neutral" />}
           </div>
           <div className="flex aspect-video items-center justify-center rounded-lg border border-border bg-accent-muted">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-bg text-on-accent">
@@ -123,7 +119,6 @@ export default function VideoBlock({ block }: { block: VideoBlockType }) {
         {trackSrc && <track kind="subtitles" src={trackSrc} srcLang="en" label="English" default />}
         Your browser does not support video playback.
       </video>
-      <Text type="supporting">Captions: use the player&apos;s CC control.</Text>
     </div>
   );
 }

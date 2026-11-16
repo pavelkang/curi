@@ -12,18 +12,19 @@
 // the circle still toggles it by hand. Step 2 ticks only for a lesson
 // with a playable video (a Mux playback id or a locally saved take),
 // never for an empty video block. In demo mode Publish only flips
-// the local flag; the step-5 note says so. Steps name the
+// the local flag; the top banner says so. Steps name the
 // last-touched course (lib/checklist.ts), not the first course.
 // Progress is computed by lib/checklist.ts, shared with the compact
 // sidebar indicator in StudioShell so the two can never disagree.
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useStudio } from "@/lib/studio-store";
 import { isPlayableVideoBlock } from "@/lib/content";
 import { checklistDoneCount, CHECKLIST_TOTAL, computeChecklistSteps, relevantCourse } from "@/lib/checklist";
 import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { Heading } from "@astryxdesign/core/Heading";
 import { Link as AstryxLink } from "@astryxdesign/core/Link";
 import { ProgressBar } from "@astryxdesign/core/ProgressBar";
@@ -167,11 +168,12 @@ export default function TeacherChecklist() {
       <VStack gap={3}>
         <div className="flex items-start justify-between gap-3">
           <Heading level={3}>Get started</Heading>
-          <Button
+          <IconButton
             label="Dismiss"
             variant="ghost"
             size="sm"
             onClick={() => dismiss(true)}
+            icon={<X className="h-4 w-4" aria-hidden />}
           />
         </div>
         <ProgressBar
@@ -238,7 +240,7 @@ export default function TeacherChecklist() {
                 onClick={() => studio.setPreviewDone(true)}
                 className="flex min-w-0 flex-1 items-center justify-between gap-3 text-accent hover:underline"
               >
-                <span className="min-w-0 flex-1 font-semibold">4. Preview as learner</span>
+                <span className="min-w-0 flex-1 font-semibold">4. Preview as learner (new tab)</span>
                 <span className="min-w-0 shrink-0 truncate">{firstCourse.title} ↗</span>
               </a>
             ) : (
@@ -258,9 +260,6 @@ export default function TeacherChecklist() {
             ),
           )}
         </ol>
-        {studio.demoMode && (
-          <Text type="supporting">Demo: publish stays in this browser.</Text>
-        )}
       </VStack>
     </section>
   );

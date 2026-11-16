@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { DEMO_STORE_NOTE, useStudio } from "@/lib/studio-store";
+import { useStudio } from "@/lib/studio-store";
 import type { Course } from "@/lib/content";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { ArrowRight } from "lucide-react";
+import NextLink from "next/link";
 import { Card } from "@/components/ui/card";
 import { Heading } from "@astryxdesign/core/Heading";
 import { Text } from "@astryxdesign/core/Text";
@@ -102,7 +105,7 @@ export default function Home() {
               <Text type="supporting">
                 {sectionCounts[c.id] ?? 0} {(sectionCounts[c.id] ?? 0) === 1 ? "section" : "sections"} · {lessonCounts[c.id] ?? 0} {(lessonCounts[c.id] ?? 0) === 1 ? "lesson" : "lessons"}
               </Text>
-              <Button label="Open" variant="secondary" size="sm" href={`/courses/${c.id}`} />
+              <IconButton label="Open" variant="ghost" size="sm" href={`/courses/${c.id}`} as={NextLink} icon={<ArrowRight className="h-4 w-4" aria-hidden />} />
             </HStack>
           </VStack>
         </Card>
@@ -115,9 +118,7 @@ export default function Home() {
     return (
       <VStack gap={4}>
         <VStack gap={2}>
-          <Text type="supporting">Learn from creators</Text>
           <Heading level={1}>Courses</Heading>
-          <Text>Video lessons, notes, and quizzes.</Text>
         </VStack>
         {!studio.hydrated ? (
           <div className="grid gap-5 sm:grid-cols-2">
@@ -126,17 +127,13 @@ export default function Home() {
           </div>
         ) : published.length === 0 ? (
           <>
-            <Text>No courses yet. Create one in the Studio.</Text>
-            <Text type="supporting">{DEMO_STORE_NOTE}.</Text>
+            <Text>No courses yet.</Text>
             <div>
               <Button label="Go to Studio" variant="secondary" href="/studio" />
             </div>
           </>
         ) : (
-          <>
-            {courseCards(published)}
-            <Text type="supporting">{DEMO_STORE_NOTE}.</Text>
-          </>
+          courseCards(published)
         )}
       </VStack>
     );
@@ -146,12 +143,10 @@ export default function Home() {
     return (
       <VStack gap={4}>
         <VStack gap={2}>
-          <Text type="supporting">Learn from creators</Text>
           <Heading level={1}>Curi</Heading>
-          <Text>Video lessons, notes, and quizzes from creators you follow.</Text>
         </VStack>
         <div>
-          <Button label="Sign in to browse courses" href="/auth" />
+          <Button label="Sign in" href="/auth" />
         </div>
       </VStack>
     );
@@ -161,7 +156,6 @@ export default function Home() {
     <VStack gap={4}>
       <VStack gap={2}>
         <Heading level={1}>Courses</Heading>
-        <Text>Pick up where you left off, or start something new.</Text>
       </VStack>
       {loading ? (
         <div className="grid gap-5 sm:grid-cols-2">

@@ -44,8 +44,7 @@ function SectionRename({
           appending to it (lib/title-input.ts). */}
       <span className="block max-w-xs" {...titleFocusHandlers("Untitled section")}>
         <Input
-          label={`Rename section ${title}`}
-          isLabelHidden
+          label="Section name"
           value={value}
           onChange={(e) => { setValue(e.target.value); setSaved(false); }}
           onBlur={commit}
@@ -152,7 +151,7 @@ export default function StudioCoursePage() {
             target="_blank"
             onClick={() => studio.setPreviewDone(true)}
           >
-            Preview as learner ↗
+            Preview as learner (new tab) ↗
           </AstryxLink>
           <Text type="supporting">{course.published ? "published" : "draft"}</Text>
           {courseDirty ? (
@@ -166,15 +165,12 @@ export default function StudioCoursePage() {
       <hr className="border-border" />
 
       <VStack gap={4}>
-        <Heading level={3}>Sections and lessons</Heading>
         {sections.length === 0 && (
           <Text type="supporting">No sections yet. Press + Section next to this course in the sidebar.</Text>
         )}
         {sections.map((section) => (
           <div key={section.id} className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-primary">{section.title}</span>
-              <span className="text-sm text-secondary">— rename:</span>
               <SectionRename title={section.title} onRename={(v) => void studio.renameSection(section.id, v)} />
             </div>
             <ul className="ml-4 space-y-1">
@@ -201,7 +197,6 @@ export default function StudioCoursePage() {
 
           <VStack gap={3}>
             <Heading level={3}>Suggested path</Heading>
-            <Text type="supporting">Suggestions only. Nothing locks a learner.</Text>
             <div className="flex flex-wrap items-center gap-2">
               <Selector
                 label="From section"
@@ -232,7 +227,7 @@ export default function StudioCoursePage() {
                 const to = sections.find((s) => s.id === d.to_section_id);
                 return (
                   <li key={d.id} className="text-sm text-secondary">
-                    {from?.title ?? "?"} → suggested next: {to?.title ?? "?"}
+                    {from?.title ?? "?"} → {to?.title ?? "?"}
                   </li>
                 );
               })}

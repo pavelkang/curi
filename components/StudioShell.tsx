@@ -18,10 +18,9 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DEMO_STORE_NOTE, useStudio } from "@/lib/studio-store";
+import { useStudio } from "@/lib/studio-store";
 import { checklistDoneCount, CHECKLIST_TOTAL, computeChecklistSteps } from "@/lib/checklist";
 import { Button } from "@astryxdesign/core/Button";
-import { Badge } from "@astryxdesign/core/Badge";
 import { Heading } from "@astryxdesign/core/Heading";
 import { Link } from "@astryxdesign/core/Link";
 import { Text } from "@astryxdesign/core/Text";
@@ -38,6 +37,18 @@ export default function StudioShell({ children }: { children: React.ReactNode })
 
   const toggle = (list: string[], id: string, set: (v: string[]) => void) =>
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+
+  // Same count as the Offline drafts queue (components/
+  // OfflineDraftsQueue.tsx): a published course is NOT a draft, and
+  // neither are its lessons. The sidebar used to count every course
+  // and lesson, so it read "2" while the queue said "No offline
+  // drafts yet." — same filter here, so the two can never disagree.
+  const draftCourses = studio.courses.filter((c) => !c.published);
+  const draftLessons = studio.lessons.filter((l) => {
+    const course = studio.courseOfLesson(l);
+    return !course || !course.published;
+  });
+  const draftCount = draftCourses.length + draftLessons.length;
 
   // Compact get-started progress, shown on course/lesson pages too —
   // the full checklist only exists on /studio, and it vanished once
@@ -67,12 +78,10 @@ export default function StudioShell({ children }: { children: React.ReactNode })
         <VStack gap={2}>
           <div className="flex items-center gap-2">
             <Heading level={1}>Studio</Heading>
-            {studio.demoMode && <Badge label="Demo" variant="neutral" />}
           </div>
-          {studio.demoMode && <Text type="supporting">{DEMO_STORE_NOTE}</Text>}
           {mounted && studio.demoMode && (
             <Link href="/studio">
-              Offline drafts: {studio.courses.length + studio.lessons.length} · saved in this browser only
+              Offline drafts: {draftCount}
             </Link>
           )}
           {mounted && inCourseOrLesson && (studio.demoMode || (studio.userId && studio.isCreator)) && (
@@ -162,7 +171,7 @@ export default function StudioShell({ children }: { children: React.ReactNode })
               );
             })}
             {studio.courses.length === 0 && (
-              <Text type="supporting">No courses yet. Press + Course.</Text>
+              <Text type="supporting">No courses yet.</Text>
             )}
           </nav>
         )}

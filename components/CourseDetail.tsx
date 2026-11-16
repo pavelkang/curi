@@ -159,7 +159,6 @@ export default function CourseDetail({ courseId: id }: { courseId: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <Heading level={1}>{shownCourse.title}</Heading>
           {!shownCourse.published && <Badge label="Draft" variant="neutral" />}
-          {demoMode && <Badge label="Demo" variant="neutral" />}
         </div>
         {/* Description and stats are each in their own block div:
             Astryx Text renders inline, so as siblings they ran

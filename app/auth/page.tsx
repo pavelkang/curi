@@ -46,13 +46,10 @@ export default function AuthPage() {
           <Heading level={1}>Welcome to Curi</Heading>
           <Text type="supporting">Demo mode — sign-in is not available yet.</Text>
         </VStack>
-        <Card>
-          <VStack gap={3}>
-            <Heading level={3}>Demo mode</Heading>
-            <Text type="supporting">No backend is connected, so there is no account to sign in to.</Text>
-            <Button label="Try the Studio" href="/studio" />
-          </VStack>
-        </Card>
+        <Text type="supporting">No backend is connected, so there is no account to sign in to.</Text>
+        <div>
+          <Button label="Try the Studio" href="/studio" />
+        </div>
       </div>
     );
   }
@@ -61,7 +58,6 @@ export default function AuthPage() {
     <div className="mx-auto max-w-md space-y-6 pt-6">
       <VStack gap={2}>
         <Heading level={1}>Welcome to Curi</Heading>
-        <Text type="supporting">Sign in to learn and track your progress.</Text>
       </VStack>
       <TabList value={mode} onChange={(v) => setMode(v as "signin" | "signup")} layout="fill">
         <Tab value="signin" label="Sign in" />
@@ -70,7 +66,6 @@ export default function AuthPage() {
       <Card>
         <form onSubmit={submit}>
           <VStack gap={4}>
-            <Heading level={3}>{mode === "signin" ? "Sign in" : "Create account"}</Heading>
             <TextInput
               label="Email"
               type="email"

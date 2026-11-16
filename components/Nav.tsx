@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { TopNav } from "@astryxdesign/core/TopNav";
 import { TopNavItem } from "@astryxdesign/core/TopNav";
-import { Badge } from "@astryxdesign/core/Badge";
 import { Button } from "@astryxdesign/core/Button";
 import { Text } from "@astryxdesign/core/Text";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -74,7 +73,6 @@ export default function Nav() {
       {(isCreator || demoMode) && (
         <TopNavItem label="Studio" href="/studio" isSelected={pathname.startsWith("/studio")} />
       )}
-      {demoMode && <Badge label="Demo" variant="neutral" />}
     </TopNav>
   );
 }

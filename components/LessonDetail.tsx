@@ -168,9 +168,6 @@ export default function LessonDetail({ courseId: id, lessonId }: { courseId: str
 
   const sidebar = (
     <Card className="overflow-hidden">
-      <div className="border-b border-border bg-accent-muted px-5 py-4">
-        <Text weight="semibold">In this course</Text>
-      </div>
       <div className="space-y-5 px-3 py-4">
         {shownNavSections.length === 0 && <Text type="supporting">No sections yet.</Text>}
         {shownNavSections.map((section) => (
@@ -217,13 +214,11 @@ export default function LessonDetail({ courseId: id, lessonId }: { courseId: str
           <div className="flex flex-wrap items-center gap-2">
             <Heading level={1}>{shownTitle}</Heading>
             {done && <Badge label="Done" variant="success" />}
-            {demoMode && <Badge label="Demo" variant="neutral" />}
           </div>
         </div>
         <LessonRenderer content={shownContent} />
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <Text weight="semibold">{done ? "Lesson marked done" : "Finished this lesson?"}</Text>
             <Button
               label={done ? "Mark as not done" : "Mark lesson as done"}
               size="lg"

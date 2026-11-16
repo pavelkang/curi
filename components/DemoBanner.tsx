@@ -10,8 +10,7 @@ export default function DemoBanner() {
   return (
     <Banner
       status="info"
-      title="Demo mode"
-      description="Saved in this browser only."
+      title="Demo — saved in this browser only."
       container="section"
     />
   );

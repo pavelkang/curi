@@ -26,6 +26,8 @@
 import { useEffect, useRef, useState } from "react";
 import WhiteboardCanvas from "./WhiteboardCanvas";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { X } from "lucide-react";
 import { Text } from "@astryxdesign/core/Text";
 
 export default function WhiteboardRecorder({
@@ -229,7 +231,7 @@ export default function WhiteboardRecorder({
             />
           </>
         )}
-        <Button label="Close" variant="secondary" onClick={() => { stopTracks(); onClose(); }} />
+        <IconButton label="Close" variant="secondary" onClick={() => { stopTracks(); onClose(); }} icon={<X className="h-4 w-4" aria-hidden />} />
       </div>
       {error && <p className="px-4 pt-2 text-sm text-error">{error}</p>}
       {status && <p className="px-4 pt-2 text-sm text-secondary">{status}</p>}

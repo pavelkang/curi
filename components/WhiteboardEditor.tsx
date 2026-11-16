@@ -41,8 +41,11 @@ export default function WhiteboardEditor({
           }}
         />
       </div>
+      {/* Labelled button, not a bare eraser glyph: clearing wipes the
+          whole board, so the destructive action needs a name and
+          button chrome, not an ambiguous icon alone. */}
       <div>
-        <Button label="Clear whiteboard" variant="ghost" size="sm" onClick={clear} />
+        <Button label="Clear whiteboard" variant="secondary" size="sm" onClick={clear} />
       </div>
     </div>
   );

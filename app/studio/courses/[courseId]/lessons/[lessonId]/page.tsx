@@ -39,6 +39,8 @@ import { deleteLocalVideo, getLocalVideoUrl, LOCAL_VIDEO_NOTE, saveLocalVideo } 
 import { renderMarkdown } from "@/lib/markdown";
 import Recorder from "@/components/Recorder";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Selector } from "@astryxdesign/core/Selector";
@@ -72,7 +74,7 @@ function LocalTakePreview({ videoId, onRemove }: { videoId: string; onRemove: ()
     <div className="space-y-2">
       <video src={url} controls className="w-full max-w-2xl rounded-lg" />
       <div>
-        <Button label="Remove take" variant="ghost" size="sm" onClick={onRemove} />
+        <Button label="Remove video" variant="ghost" size="sm" onClick={onRemove} />
       </div>
     </div>
   );
@@ -307,7 +309,7 @@ export default function StudioLessonPage() {
     }
   };
 
-  const removeTake = async (blockIndex: number, localVideoId: string) => {
+  const removeVideo = async (blockIndex: number, localVideoId: string) => {
     try {
       await deleteLocalVideo(localVideoId);
     } catch {
@@ -333,9 +335,6 @@ export default function StudioLessonPage() {
             controlClassName="text-2xl font-bold"
           />
         </div>
-        <Text type="supporting">
-          In section: {section?.title ?? "—"}
-        </Text>
         <div className="flex flex-wrap items-center gap-2">
           <Text type="supporting">Move to section</Text>
           <Selector
@@ -360,7 +359,7 @@ export default function StudioLessonPage() {
             target="_blank"
             onClick={() => studio.setPreviewDone(true)}
           >
-            Preview as learner ↗
+            Preview as learner (new tab) ↗
           </AstryxLink>
           {dirty ? (
             <Text weight="semibold">Unsaved changes</Text>
@@ -381,14 +380,13 @@ export default function StudioLessonPage() {
             <Text weight="semibold">{{ video: "Video", markdown: "Text", quiz: "Quiz", whiteboard: "Whiteboard" }[block.kind]}</Text>
             <Button label="Move block up" variant="secondary" size="sm" onClick={() => moveBlock(bi, -1)}>↑</Button>
             <Button label="Move block down" variant="secondary" size="sm" onClick={() => moveBlock(bi, 1)}>↓</Button>
-            <Button
+            <IconButton
               label="Delete block"
               variant="destructive"
               size="sm"
               onClick={() => setContent((c) => ({ ...c, blocks: c.blocks.filter((_, i) => i !== bi) }))}
-            >
-              Delete
-            </Button>
+              icon={<Trash2 className="h-4 w-4" aria-hidden />}
+            />
           </div>
 
           {block.kind === "video" && (
@@ -397,7 +395,7 @@ export default function StudioLessonPage() {
               {block.local_video_id ? (
                 <LocalTakePreview
                   videoId={block.local_video_id}
-                  onRemove={() => void removeTake(bi, block.local_video_id!)}
+                  onRemove={() => void removeVideo(bi, block.local_video_id!)}
                 />
               ) : (
                 <Text type="supporting">No video attached yet.</Text>
@@ -407,6 +405,17 @@ export default function StudioLessonPage() {
                     inline even with as="div", which ran this label into
                     the file input on one line. */}
                 <div className="font-semibold">Video file</div>
+                {/* The native file input always reads "No file chosen"
+                    when empty — even when a video is already attached
+                    and playable above. Say so, so the two signals
+                    don't contradict each other. The file name itself
+                    is not stored (lib/local-video.ts keeps id/blob
+                    only), so "Video attached" is the honest state.
+                    Plain div, not Astryx Text: Text styles its element
+                    inline, which ran this line into the file input. */}
+                {(block.local_video_id || block.mux_playback_id) && (
+                  <div className="text-sm text-secondary">Video attached — choose a file below to replace it.</div>
+                )}
                 <Input type="file" accept="video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) void attachFile(bi, f); }} />
                 <Text type="supporting">{studio.demoMode ? LOCAL_VIDEO_NOTE : "Uploads for processing. Playback appears in a few minutes."}</Text>
               </div>
@@ -415,7 +424,7 @@ export default function StudioLessonPage() {
               <details className="rounded-lg border border-border px-4 py-3">
                 <summary className="cursor-pointer text-sm font-semibold text-primary">Advanced video settings</summary>
                 <div className="space-y-3 pt-3">
-                  <Input label="Video ID (Mux)" placeholder="Video ID (Mux)" value={block.mux_playback_id ?? ""} onChange={(e) => updateBlock(bi, { mux_playback_id: e.target.value })} />
+                  <Input label="Video ID (Mux)" value={block.mux_playback_id ?? ""} onChange={(e) => updateBlock(bi, { mux_playback_id: e.target.value })} />
                   <Input label="Asset ID (Mux, optional)" placeholder="Asset ID (Mux, optional)" value={block.mux_asset_id ?? ""} onChange={(e) => updateBlock(bi, { mux_asset_id: e.target.value })} />
                   <Input label="Caption file URL (optional)" placeholder="Caption file URL (optional)" value={block.caption_track_url ?? ""} onChange={(e) => updateBlock(bi, { caption_track_url: e.target.value })} />
                   <div className="space-y-2">
@@ -424,7 +433,6 @@ export default function StudioLessonPage() {
                       rows={6}
                       value={block.caption_text ?? ""}
                       onChange={(e) => updateBlock(bi, { caption_text: e.target.value })}
-                      placeholder="Paste captions here (optional)"
                     />
                   </div>
                   <Text type="supporting">Captions here stay in this lesson; they are not sent to Mux.</Text>
@@ -453,7 +461,7 @@ export default function StudioLessonPage() {
                   <div>
                     <Button label="Record whiteboard" onClick={() => setRecordingWhiteboard(bi)} />
                   </div>
-                  <Text type="supporting">Draw, save the lesson, and students see this drawing. Recording adds a video block after it.</Text>
+                  <Text type="supporting">Recording adds a video block after this one.</Text>
                 </>
               )}
             </div>
@@ -462,7 +470,6 @@ export default function StudioLessonPage() {
           {block.kind === "markdown" && (
             <div className="space-y-3">
               <Textarea label="Markdown" isLabelHidden rows={8} value={block.markdown} onChange={(e) => updateBlock(bi, { markdown: e.target.value })} />
-              <Text weight="semibold">Preview</Text>
               <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(block.markdown) }} />
             </div>
           )}
@@ -472,13 +479,13 @@ export default function StudioLessonPage() {
               <Input label="Quiz title" placeholder="Quiz title (optional)" value={block.title ?? ""} onChange={(e) => updateBlock(bi, { title: e.target.value })} />
               {block.questions.map((q, qi) => (
                 <div key={q.id} className="space-y-2 border-t border-border pt-4">
-                  <Input label="Question prompt" placeholder="Question prompt" value={q.prompt} onChange={(e) => {
+                  <Input label="Question prompt" value={q.prompt} onChange={(e) => {
                     const questions = block.questions.map((qq, j) => (j === qi ? { ...qq, prompt: e.target.value } : qq));
                     updateBlock(bi, { questions });
                   }} />
                   {q.options.map((opt, oi) => (
                     <div key={oi} className="flex items-center gap-2">
-                      <Input label={`Option ${oi + 1}`} placeholder={`Option ${oi + 1}`} value={opt} className="flex-1" onChange={(e) => {
+                      <Input label={`Option ${oi + 1}`} value={opt} className="flex-1" onChange={(e) => {
                         const questions = block.questions.map((qq, j) => (j === qi ? { ...qq, options: qq.options.map((o, k) => (k === oi ? e.target.value : o)) } : qq));
                         updateBlock(bi, { questions });
                       }} />
@@ -499,14 +506,25 @@ export default function StudioLessonPage() {
                   {q.correct_index < 0 && (
                     <Text type="supporting">Choose the correct answer.</Text>
                   )}
-                  <Input label="Explanation (shown after answering)" placeholder="Explanation (shown after answering)" value={q.explanation} onChange={(e) => {
+                  <Input label="Explanation (shown after answering)" value={q.explanation} onChange={(e) => {
                     const questions = block.questions.map((qq, j) => (j === qi ? { ...qq, explanation: e.target.value } : qq));
                     updateBlock(bi, { questions });
                   }} />
-                  <Button label="Delete question" variant="secondary" size="sm" onClick={() => {
-                    const questions = block.questions.filter((_, j) => j !== qi);
-                    updateBlock(bi, { questions });
-                  }} />
+                  {/* Labelled destructive button, matching the red
+                      block-delete trash above: the old grey icon-only
+                      button read as unrelated to it and its scope
+                      (this question vs the whole quiz) was unclear.
+                      The text must be a child, not only the label:
+                      Astryx renders children as the visible content
+                      and uses `label` as the accessible name. */}
+                  <div>
+                    <Button label="Delete question" variant="destructive" size="sm" onClick={() => {
+                      const questions = block.questions.filter((_, j) => j !== qi);
+                      updateBlock(bi, { questions });
+                    }}>
+                      <Trash2 className="h-4 w-4" aria-hidden /> Delete question
+                    </Button>
+                  </div>
                 </div>
               ))}
               <Button label="+ Add question" variant="secondary" onClick={() => {

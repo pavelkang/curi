@@ -41,9 +41,7 @@ export default function OfflineDraftsQueue() {
       <section aria-label="Offline drafts queue" className="rounded-lg border border-border bg-surface p-4 sm:p-5">
         <VStack gap={1}>
           <Heading level={3}>Offline drafts</Heading>
-          <Text type="supporting">
-            Saved to Supabase — no queue. {studio.courses.length} courses · {studio.lessons.length} lessons in this session.
-          </Text>
+          <Text type="supporting">Saved to Supabase — no queue.</Text>
         </VStack>
       </section>
     );
@@ -69,9 +67,7 @@ export default function OfflineDraftsQueue() {
         {queuedCount === 0 ? (
           <Text type="supporting">No offline drafts yet.</Text>
         ) : (
-          <>
-            <Text type="supporting">Saved in this browser only.</Text>
-            <ul className="space-y-2">
+          <ul className="space-y-2">
             {draftCourses.map((course) => (
               <li key={course.id} className="flex items-start justify-between gap-3 border-t border-border pt-2">
                 <div className="min-w-0">
@@ -79,14 +75,18 @@ export default function OfflineDraftsQueue() {
                   {/* Plain div, not Astryx Text: Text styles its element
                       inline even with as="div", which ran the meta into
                       the title on one line. */}
-                  <div className="text-sm text-secondary">Course · {course.published ? "published" : "draft"}</div>
+                  <div className="text-sm text-secondary">Course</div>
                 </div>
-                <Badge label="In this browser" variant="neutral" />
               </li>
             ))}
             {draftLessons.map((lesson) => {
               const course = studio.courseOfLesson(lesson);
               const section = studio.sections.find((s) => s.id === lesson.section_id);
+              const meta = [
+                course?.title,
+                section?.title,
+                blockSummary(lesson),
+              ].filter(Boolean).join(" · ");
               return (
                 <li key={lesson.id} className="flex items-start justify-between gap-3 border-t border-border pt-2">
                   <div className="min-w-0">
@@ -94,17 +94,12 @@ export default function OfflineDraftsQueue() {
                       {lesson.title}
                     </Link>
                     {/* Plain div, not Astryx Text (see course row above). */}
-                    <div className="text-sm text-secondary">
-                      Lesson{course ? ` · ${course.title}` : ""}
-                      {section ? ` · ${section.title}` : ""} · {blockSummary(lesson)}
-                    </div>
+                    <div className="text-sm text-secondary">{meta}</div>
                   </div>
-                  <Badge label="In this browser" variant="neutral" />
                 </li>
               );
             })}
-            </ul>
-          </>
+          </ul>
         )}
       </VStack>
     </section>
