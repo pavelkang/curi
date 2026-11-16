@@ -222,6 +222,12 @@ export default function CourseDetail({ courseId: id }: { courseId: string }) {
                             <PlayCircle className="h-5 w-5 shrink-0 text-accent" aria-hidden />
                           )}
                           <span className="flex-1 font-medium text-primary group-hover:text-accent">{lesson.title}</span>
+                          {/* The "Done" badge stays: the check icon alone
+                              was not enough — the evaluator (icon-trim
+                              pass 2) could not tell done rows from the
+                              small play-vs-check glyph swap, and with
+                              many lessons the count line doesn't say
+                              WHICH ones are done. */}
                           {progress[lesson.id] && <Badge label="Done" variant="success" />}
                           <ChevronRight className="h-4 w-4 shrink-0 text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-accent" aria-hidden />
                         </Link>
