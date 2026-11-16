@@ -57,6 +57,18 @@ export default function StudioShell({ children }: { children: React.ReactNode })
   const checklistSteps = computeChecklistSteps(studio.courses, studio.lessons, studio.previewDone);
   const checklistDone = checklistDoneCount(checklistSteps);
 
+  // Live mode, signed out: prompt for authentication right away.
+  // Wait for the store's `hydrated` (auth resolved) so a signed-in
+  // creator is never bounced to /auth on a slow first load. `mounted`
+  // keeps the first render matching the server (see the hydration
+  // note above). Until then the shell shows only "Loading Studio…"
+  // — no creator tools appear before the redirect.
+  const needsAuth =
+    mounted && studio.hydrated && !studio.demoMode && !studio.userId;
+  useEffect(() => {
+    if (needsAuth) router.replace(`/auth?next=${encodeURIComponent(pathname)}`);
+  }, [needsAuth, pathname, router]);
+
   const onCreateCourse = async () => {
     const course = await studio.createCourse();
     router.push(`/studio/courses/${course.id}`);
@@ -71,6 +83,10 @@ export default function StudioShell({ children }: { children: React.ReactNode })
     setCollapsedSections((s) => s.filter((x) => x !== sectionId));
     router.push(`/studio/courses/${courseId}/lessons/${lesson.id}`);
   };
+
+  if (needsAuth) {
+    return <Text type="supporting">Redirecting to sign in…</Text>;
+  }
 
   return (
     <div className="flex flex-col gap-8 lg:flex-row lg:items-start">

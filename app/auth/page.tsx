@@ -31,7 +31,20 @@ export default function AuthPage() {
     if (mode === "signin") {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) setError(err.message);
-      else window.location.href = "/";
+      else {
+        // Return to where the sign-in was prompted from (e.g. /studio).
+        // Only same-origin paths are honoured; anything else falls
+        // back to the home page. Read here, not via useSearchParams,
+        // so this page needs no Suspense boundary.
+        let dest = "/";
+        try {
+          const next = new URLSearchParams(window.location.search).get("next");
+          if (next && next.startsWith("/") && !next.startsWith("//")) dest = next;
+        } catch {
+          // No query string: home page.
+        }
+        window.location.href = dest;
+      }
     } else {
       const { error: err } = await supabase.auth.signUp({ email, password });
       if (err) setError(err.message);
