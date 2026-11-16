@@ -31,12 +31,14 @@ import { titleFocusHandlers } from "@/lib/title-input";
 // TLDraw needs the browser; load whiteboard UI client-only.
 const WhiteboardEditor = dynamic(() => import("@/components/WhiteboardEditor"), { ssr: false });
 const WhiteboardRecorder = dynamic(() => import("@/components/WhiteboardRecorder"), { ssr: false });
+// Same for the markdown editor: @uiw/react-md-editor touches window
+// at import time.
+const MarkdownEditor = dynamic(() => import("@/components/MarkdownEditor"), { ssr: false });
 import {
   emptyContent, newId,
   type LessonBlock, type LessonContent,
 } from "@/lib/content";
 import { deleteLocalVideo, getLocalVideoUrl, LOCAL_VIDEO_NOTE, saveLocalVideo } from "@/lib/local-video";
-import { renderMarkdown } from "@/lib/markdown";
 import Recorder from "@/components/Recorder";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@astryxdesign/core/IconButton";
@@ -468,10 +470,7 @@ export default function StudioLessonPage() {
           )}
 
           {block.kind === "markdown" && (
-            <div className="space-y-3">
-              <Textarea label="Markdown" isLabelHidden rows={8} value={block.markdown} onChange={(e) => updateBlock(bi, { markdown: e.target.value })} />
-              <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(block.markdown) }} />
-            </div>
+            <MarkdownEditor value={block.markdown} onChange={(v) => updateBlock(bi, { markdown: v })} />
           )}
 
           {block.kind === "quiz" && (

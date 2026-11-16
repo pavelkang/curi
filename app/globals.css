@@ -78,3 +78,54 @@
 .markdown-body blockquote {
   @apply border-l-4 border-purple-ring bg-accent-muted py-2 pl-4 pr-3 text-secondary;
 }
+
+/* Markdown editor (@uiw/react-md-editor) in the lesson editor.
+   The editor ships GitHub-flavoured CSS; these overrides pull it
+   into the Astryx theme: Figtree, flat white, hairline border,
+   20px card radius, violet accent. Scoped to the editor wrapper so
+   the learner-side .markdown-body rendering above is untouched.
+   The editor reads GitHub Primer variables, so the tokens are set
+   here rather than by restyling every primer class. */
+.curi-md-editor {
+  --md-editor-font-family: var(--font-figtree), ui-sans-system, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f6f7fb;
+  --color-fg-default: var(--color-text-primary);
+  --color-fg-muted: var(--color-text-secondary);
+  --color-border-default: var(--color-border);
+  --color-border-muted: var(--color-border);
+  --color-neutral-muted: var(--color-accent-muted);
+  --color-accent-fg: var(--color-accent);
+  --color-accent-emphasis: var(--color-accent);
+}
+.curi-md-editor .w-md-editor {
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: none;
+  background: #ffffff;
+  color: var(--color-text-primary);
+}
+.curi-md-editor .w-md-editor-toolbar {
+  border-bottom: 1px solid var(--color-border);
+  background: #ffffff;
+  border-radius: 20px 20px 0 0;
+}
+.curi-md-editor .w-md-editor-toolbar li > button {
+  color: var(--color-text-secondary);
+}
+.curi-md-editor .w-md-editor-toolbar li > button:hover,
+.curi-md-editor .w-md-editor-toolbar li > button:focus {
+  color: var(--color-accent);
+  background: var(--color-accent-muted);
+}
+.curi-md-editor .w-md-editor-text-input,
+.curi-md-editor .w-md-editor-text-pre,
+.curi-md-editor .w-md-editor-text-input > textarea {
+  font-family: var(--md-editor-font-family);
+  color: var(--color-text-primary);
+}
+.curi-md-editor .wmde-markdown {
+  font-family: var(--md-editor-font-family);
+  background: #ffffff;
+  color: var(--color-text-primary);
+}
