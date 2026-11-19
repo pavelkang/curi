@@ -4,6 +4,18 @@ Curi is a goal-oriented, collaborative learning platform that features recursive
 It's a platform for both creators and consumers (teacher and students).
 Knowledge is organized as graphs with nodes. Each node is the smallest learning unit, and is a represented as a learning page (with markdown, tldraw, video, ...). Creators are responsible for defining the nodes, adding contents, and define their dependencies. Dependencies and contents can be edited later as well.
 
+## Example
+
+```mermaid
+flowchart TD
+    A["OpenAI generated a disproof of the Exponential Time Hypothesis (ETH)"]
+    A --> B["What is ETH?"]
+    A --> C["Implications of proving ETH"]
+    A --> D["Implications of disproving ETH"]
+
+    B --> E["What is 3-SAT?"]
+    B --> F["What is exponential time complexity?"]
+```
 
 
 ## UI: Astryx, clean and minimal
