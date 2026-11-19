@@ -1,8 +1,10 @@
 # Curi — MVP
 
-A learning platform, web first, no payment. Creators build courses as a
-graph of lesson pages; learners watch, read, take MCQ quizzes, and
-self-mark lessons done. Suggested path only — nothing locks.
+Curi is a goal-oriented, collaborative learning platform that features recursive backward learning.
+It's a platform for both creators and consumers (teacher and students).
+Knowledge is organized as graphs with nodes. Each node is the smallest learning unit, and is a represented as a learning page (with markdown, tldraw, video, ...). Creators are responsible for defining the nodes, adding contents, and define their dependencies. Dependencies and contents can be edited later as well.
+
+
 
 ## UI: Astryx, clean and minimal
 
